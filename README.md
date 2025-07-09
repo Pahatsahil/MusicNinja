@@ -1,4 +1,55 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# 🎵 MusicNinja – React Native App
+
+A personal music app built with **React Native** and powered by a **Flask backend**, which converts YouTube videos into MP3 audio and plays them using `react-native-track-player`.
+
+---
+
+## 🚀 Features
+
+- 🔎 Search YouTube videos (music only) via YouTube Data API
+- 🎧 Download and play MP3 audio extracted via `yt-dlp`
+- 💾 Save audio files locally to reduce re-downloads
+- 🔊 Integrated audio player with playback controls
+- ⚡ Fast and simple UI designed for daily personal use
+
+---
+
+## 🧱 Tech Stack
+
+| Layer    | Technology                |
+| -------- | ------------------------- |
+| Frontend | React Native, TypeScript  |
+| Backend  | Flask, yt-dlp, Python     |
+| Audio    | react-native-track-player |
+| Storage  | Local File System (RNFS)  |
+
+---
+
+## 📂 Folder Structure
+
+MusicNinja/
+├── src/
+│ ├── components/
+│ ├── screens/
+│ ├── services/ # API functions (search, download)
+│ ├── hooks/ # Custom player/audio hooks
+│ └── utils/ # Common utilities
+├── assets/
+│ ├── images/
+│ └── splash/
+├── App.tsx
+└── package.json
+
+---
+
+## 🔧 Setup Instructions
+
+1. **Clone the repo**
+
+````bash
+git clone https://github.com/Pahatsahil/MusicNinja.git
+cd MusicNinja
+
 
 # Getting Started
 
@@ -16,7 +67,7 @@ npm start
 
 # OR using Yarn
 yarn start
-```
+````
 
 ## Step 2: Build and run your app
 
