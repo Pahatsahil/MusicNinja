@@ -53,39 +53,32 @@ cd MusicNinja
 Note: Make sure you've followed the official React Native environment setup guide for your OS.
 
 2. Start Metro Bundler
-bash
-Copy
-Edit
 # Using npm
 npm start
 
+
 # OR using Yarn
 yarn start
+
+
 3. Run the App
 Android
-bash
-Copy
-Edit
 npm run android
 # OR
 yarn android
 iOS (Mac Only)
 Install CocoaPods first (only once):
 
-bash
-Copy
-Edit
 cd ios
 pod install
 cd ..
 Then run:
 
-bash
-Copy
-Edit
 npm run ios
 # OR
 yarn ios
+
+
 4. Edit and Save
 Open App.tsx and make changes. Your app will auto-refresh via Fast Refresh.
 
@@ -94,9 +87,6 @@ React Native Docs: Troubleshooting Guide
 
 Reset cache:
 
-bash
-Copy
-Edit
 npx react-native start --reset-cache
 🎉 Congratulations!
 You’ve successfully run and modified your React Native app! 🎊
