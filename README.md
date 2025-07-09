@@ -40,10 +40,6 @@ MusicNinja/
 ├── App.tsx
 └── package.json
 
-yaml
-Copy
-Edit
-
 ---
 
 ## 🔧 Setup Instructions
