@@ -75,7 +75,6 @@ const requestApi = {
       console.log('======response=======', response)
       return response;
     } catch (error: any) {
-      console.log("pOST ERROR",error)
       if (error.response?.status === 401) {
         await requestApi.refreshTokenApi();
         const retryResponse = await axiosInstance.post<T>(url, payload, config);

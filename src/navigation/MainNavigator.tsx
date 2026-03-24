@@ -6,6 +6,7 @@ import screenNames from './screenNames';
 import BottomTabNavigators from './BottomNavigation';
 import Splash from '@screens/Splash';
 import Player from '@screens/Player';
+import PlaylistDetail from '@screens/PlaylistDetail';
 
 enableScreens();
 
@@ -31,6 +32,11 @@ const MainNavigator = () => {
           animation: 'slide_from_bottom',
           presentation: 'modal',
         }}
+      />
+      <Stack.Screen
+        name={screenNames.PlaylistDetail}
+        component={PlaylistDetail}
+        options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>
   );

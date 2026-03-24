@@ -11,6 +11,7 @@ import {
   Animated,
   Keyboard,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import AppColors from '@constants/AppColors';
 import AppFonts from '@constants/AppFonts';
@@ -19,12 +20,13 @@ import { searchMusic } from '@api/music/musicApi';
 import SongItem from '@components/SongItem';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const RECENT_SEARCHES = ['The Weeknd', 'Dua Lipa', 'Kendrick Lamar', 'Taylor Swift'];
+const RECENT_SEARCHES_KEY = '@recent_searches';
 
 const Search = ({ navigation }: any) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
@@ -40,6 +42,20 @@ const Search = ({ navigation }: any) => {
     );
   };
 
+  React.useEffect(() => {
+    const loadRecentSearches = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
+        if (stored) {
+          setRecentSearches(JSON.parse(stored));
+        }
+      } catch (err) {
+        console.error('Failed to load recent searches', err);
+      }
+    };
+    loadRecentSearches();
+  }, []);
+
   const borderColor = barAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [AppColors.GlassBorder, AppColors.NeonPurple],
@@ -48,6 +64,14 @@ const Search = ({ navigation }: any) => {
   const handleSearch = useCallback(async (q?: string) => {
     const term = q ?? query;
     if (!term.trim()) return;
+
+    // Save recent search
+    setRecentSearches(prev => {
+      const updated = [term.trim(), ...prev.filter(s => s.toLowerCase() !== term.trim().toLowerCase())].slice(0, 5);
+      AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated)).catch(() => {});
+      return updated;
+    });
+
     Keyboard.dismiss();
     setLoading(true);
     try {
@@ -118,7 +142,7 @@ const Search = ({ navigation }: any) => {
           <Text style={styles.idleTitle}>What do you want to listen to?</Text>
           <Text style={styles.recentLabel}>Recent Searches</Text>
           <View style={styles.recentContainer}>
-            {RECENT_SEARCHES.map(s => (
+            {recentSearches.map(s => (
               <TouchableOpacity
                 key={s}
                 style={styles.recentChip}

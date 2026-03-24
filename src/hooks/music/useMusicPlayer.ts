@@ -1,138 +1,121 @@
+import { useCallback, useEffect, useRef } from 'react';
 import { NativeEventEmitter, NativeModules } from 'react-native';
-import React, { useCallback, useEffect, useState } from 'react';
 import { PLATFORM_IOS } from '@utills/Common';
-import { useAppDispatch } from '@redux/store/hooks';
+import { useAppDispatch, useAppSelector } from '@redux/store/hooks';
 import { showToast } from '@redux/slices/toast/toastSlice';
-import { useFocusEffect } from '@react-navigation/native';
+import {
+  setIsPlaying,
+  setIsPaused,
+  nextTrack,
+} from '@redux/slices/player/playerSlice';
 
 const { MusicPlayer } = NativeModules;
 const MusicPlayerEvents = new NativeEventEmitter(MusicPlayer);
 
+/**
+ * Queue-aware music player hook.
+ * Reads isPlaying/isPaused from Redux; emits events to native module.
+ * On completion → dispatches nextTrack (auto-advance queue).
+ */
 const useMusicPlayer = () => {
-    const dispatch = useAppDispatch();
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [soundLoader, setSoundLoader] = useState(false);
-    const [playerStatus, setPlayerStatus] = useState({
-        elapsedTime: 0,
-        duration: 0,
+  const dispatch = useAppDispatch();
+  const { isPlaying, isPaused, currentTrack } = useAppSelector(s => s.player);
+  const soundLoaderRef = useRef(false);
+  const setSoundLoader = (v: boolean) => { soundLoaderRef.current = v; };
+
+  useEffect(() => {
+    const statusSub = MusicPlayerEvents.addListener('onPlaybackStatus', status => {
+      if (PLATFORM_IOS && status?.status === 'started') {
+        setSoundLoader(false);
+      }
+      dispatch(setIsPlaying(status.isPlaying));
     });
 
-    const [completed, setCompleted] = useState(null);
+    const completionSub = MusicPlayerEvents.addListener('onPlaybackComplete', data => {
+      setSoundLoader(false);
+      if (!data.completed && data.error) {
+        dispatch(showToast({ message: 'Unable to load the music file.', type: 'error' }));
+      }
+      if (data.completed) {
+        // Auto-advance queue (playerSlice.nextTrack handles repeat logic)
+        dispatch(nextTrack());
+      }
+      dispatch(setIsPlaying(false));
+    });
 
-    useFocusEffect(useCallback(() => {
-        setSoundLoader(false)
-        setIsPlaying(false)
-    }, []))
-
-    useEffect(() => {
-        // Subscribe to playback status updates
-        const statusSubscription = MusicPlayerEvents.addListener(
-            'onPlaybackStatus',
-            status => {
-                if (PLATFORM_IOS && status?.status === 'started') {
-                    setSoundLoader(false);
-                }
-                setPlayerStatus({
-                    elapsedTime: status.currentTime,
-                    duration: status.duration,
-                });
-                setIsPlaying(status.isPlaying);
-            },
-        );
-
-        // Subscribe to playback completion event
-        const completionSubscription = MusicPlayerEvents.addListener(
-            'onPlaybackComplete',
-            data => {
-                setIsPlaying(false);
-
-                if (!data.completed && data.error) {
-                    setSoundLoader(false);
-                    dispatch(
-                        showToast({
-                            message: 'Unable to load the music file.',
-                            type: 'error',
-                        }),
-                    );
-                    // console.error('Playback error:', data.error);
-                }
-                setCompleted(data.completed);
-            },
-        );
-
-        // Clean up subscriptions on unmount
-        return () => {
-            statusSubscription.remove();
-            completionSubscription.remove();
-
-            // Stop playback if something is still playing
-            MusicPlayer?.stopPlayback()
-                .then(() => {
-                    setIsPlaying(false);
-                    setSoundLoader(false);
-                })
-                .catch((err: any) =>
-                    console.error('Error stopping playback on unmount:', err),
-                );
-        };
-    }, []);
-
-    const playSoundIos = async (uri: string) => {
-        try {
-            setSoundLoader(true);
-            MusicPlayer?.convertWavToM4a(uri).then(async (newUri: string) => {
-                const sound = await MusicPlayer?.playAudio(newUri);
-                console.log('enter in play', uri, sound, newUri);
-            });
-        } catch (error) {
-            console.log('ERROR PLAY', error);
-        }
-        !PLATFORM_IOS && setSoundLoader(false);
+    return () => {
+      statusSub.remove();
+      completionSub.remove();
     };
-    const playSoundAndroid = async (uri: string) => {
-        console.log('this si s', uri);
-        try {
-            setSoundLoader(true);
-            // MusicPlayer?.convertWavToM4a(uri).then(async (newUri: string) => {
+  }, [dispatch]);
 
-            const sound = await MusicPlayer?.playAudio(uri);
-            console.log('enter in play', uri, sound);
-        } catch (error) {
-            console.log('ERROR PLAY', error);
-        }
-        !PLATFORM_IOS && setSoundLoader(false);
-    };
+  // ─── Core playback ───────────────────────────────────────────────────────
 
-    const pauseSound = async () => {
-        if (isPlaying) {
-            await MusicPlayer?.pauseAudio();
-        }
-    };
+  const playSoundIos = useCallback(async (uri: string) => {
+    try {
+      setSoundLoader(true);
+      MusicPlayer?.convertWavToM4a(uri).then(async (newUri: string) => {
+        await MusicPlayer?.playAudio(newUri);
+      });
+    } catch (error) {
+      console.log('ERROR PLAY IOS', error);
+    }
+  }, []);
 
-    const resumeSound = async () => {
-        if (isPlaying) {
-            await MusicPlayer?.resumeAudio();
-        }
-    };
+  const playSoundAndroid = useCallback(async (uri: string) => {
+    try {
+      setSoundLoader(true);
+      await MusicPlayer?.playAudio(uri);
+    } catch (error) {
+      console.log('ERROR PLAY ANDROID', error);
+    } finally {
+      setSoundLoader(false);
+    }
+  }, []);
 
-    const stopSound = async () => {
-        if (isPlaying) {
-            setIsPlaying(false);
-            setSoundLoader(false);
-            await MusicPlayer?.stopPlayback();
-        }
-    };
+  const pauseSound = useCallback(async () => {
+    if (isPlaying) {
+      await MusicPlayer?.pauseAudio();
+      dispatch(setIsPaused(true));
+      dispatch(setIsPlaying(false));
+    }
+  }, [isPlaying, dispatch]);
 
-    return {
-        playSound: PLATFORM_IOS ? playSoundIos : playSoundAndroid,
-        playSound2: playSoundAndroid,
-        resumeSound,
-        pauseSound,
-        stopSound,
-        isPlaying,
-        playerStatus,
-        completed,
-        soundLoader,
-    };
+  const resumeSound = useCallback(async () => {
+    if (isPaused) {
+      await MusicPlayer?.resumeAudio();
+      dispatch(setIsPaused(false));
+      dispatch(setIsPlaying(true));
+    }
+  }, [isPaused, dispatch]);
+
+  const stopSound = useCallback(async () => {
+    await MusicPlayer?.stopPlayback();
+    dispatch(setIsPlaying(false));
+    dispatch(setIsPaused(false));
+    setSoundLoader(false);
+  }, [dispatch]);
+
+  /**
+   * updateNowPlaying — tells native module (Android MediaSession / iOS MPNowPlayingInfoCenter)
+   * about the currently playing track so lock screen + notification shows correct metadata.
+   */
+  const updateNowPlaying = useCallback((title: string, artist: string, thumbnail?: string) => {
+    try {
+      MusicPlayer?.updateNowPlaying?.({ title, artist, thumbnail: thumbnail ?? '' });
+    } catch (_) {}
+  }, []);
+
+  return {
+    playSound: PLATFORM_IOS ? playSoundIos : playSoundAndroid,
+    pauseSound,
+    resumeSound,
+    stopSound,
+    updateNowPlaying,
+    isPlaying,
+    isPaused,
+    soundLoader: soundLoaderRef.current,
+  };
 };
+
 export default useMusicPlayer;

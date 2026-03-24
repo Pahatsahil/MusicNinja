@@ -17,135 +17,105 @@ import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getLatestMusic } from '@api/music/musicApi';
+import useDownloadedTracks from '@hooks/music/useDownloadedTracks';
+import usePlaylists from '@hooks/music/usePlaylists';
+import { useAppDispatch } from '@redux/store/hooks';
+import { setCurrentTrack, setQueue } from '@redux/slices/player/playerSlice';
 
 const { width } = Dimensions.get('window');
 const CARD_W = width * 0.44;
 
-const FEATURED = [
-  {
-    id: '1',
-    title: 'Blinding Lights',
-    artist: 'The Weeknd',
-    gradient: ['#1a1a2e', '#16213e', '#0f3460'],
-    emoji: '🌆',
-  },
-  {
-    id: '2',
-    title: 'Levitating',
-    artist: 'Dua Lipa',
-    gradient: ['#2d1b69', '#11998e', '#38ef7d'],
-    emoji: '🪐',
-  },
-  {
-    id: '3',
-    title: 'Stay',
-    artist: 'The Kid LAROI',
-    gradient: ['#fc466b', '#3f5efb'],
-    emoji: '🔥',
-  },
-  {
-    id: '4',
-    title: 'Heat Waves',
-    artist: 'Glass Animals',
-    gradient: ['#1a1a2e', '#e96c4c'],
-    emoji: '🌊',
-  },
-];
-
-const TRENDING = [
-  { id: 'a', title: 'Starboy', artist: 'The Weeknd', plays: '1.2B', emoji: '⭐' },
-  { id: 'b', title: 'Peaches', artist: 'Justin Bieber', plays: '980M', emoji: '🍑' },
-  { id: 'c', title: 'Good 4 U', artist: 'Olivia Rodrigo', plays: '870M', emoji: '💜' },
-  { id: 'd', title: 'Montero', artist: 'Lil Nas X', plays: '760M', emoji: '🎸' },
-];
-
 const HomeScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
   const scrollY = useRef(new Animated.Value(0)).current;
   const [greeting, setGreeting] = useState('Good Morning');
+
+  const { tracks } = useDownloadedTracks();
+  const { playlists, refreshPlaylists } = usePlaylists();
+
+  useEffect(() => {
+    refreshPlaylists();
+  }, []);
 
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 17) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
-    getLatestMusicList()
+    getLatestMusicList();
   }, []);
-const getLatestMusicList = async () => {
-  try {
- const data = await getLatestMusic()
-  console.log("DATA",data)   
-  } catch (error) {
-    console.log(error)
-  }
-}
+
+  const getLatestMusicList = async () => {
+    try {
+      const data = await getLatestMusic();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const headerBg = scrollY.interpolate({
     inputRange: [0, 80],
     outputRange: ['transparent', AppColors.DeepPurple],
     extrapolate: 'clamp',
   });
 
-  const renderFeaturedCard = useCallback(
+  const handlePlayDownloadedTrack = (item: any) => {
+    dispatch(setQueue({ queue: tracks, startIndex: tracks.findIndex(t => t.video_id === item.video_id) }));
+    navigation.navigate('Player', { song: item });
+  };
+
+  const renderDownloadedCard = useCallback(
     ({ item }: any) => (
       <TouchableOpacity
         activeOpacity={0.85}
         style={styles.featuredCard}
-        onPress={() =>
-          navigation.navigate('Player', {
-            song: {
-              title: item.title,
-              channelTitle: item.artist,
-              thumbnail: null,
-              video_id: item.id,
-            },
-          })
-        }>
-        <LinearGradient colors={item.gradient} style={styles.featuredGradient}>
-          <Text style={styles.featuredEmoji}>{item.emoji}</Text>
+        onPress={() => handlePlayDownloadedTrack(item)}>
+        {item.thumbnail ? (
+          <Image source={{ uri: item.thumbnail }} style={StyleSheet.absoluteFillObject} />
+        ) : (
+          <LinearGradient colors={[AppColors.DeepBlack, AppColors.RichPurple]} style={StyleSheet.absoluteFillObject} />
+        )}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.8)']}
+          style={styles.featuredGradient}>
+          <View style={{ flex: 1 }} />
           <View style={styles.featuredInfo}>
             <Text style={styles.featuredTitle} numberOfLines={1}>
               {item.title}
             </Text>
             <Text style={styles.featuredArtist} numberOfLines={1}>
-              {item.artist}
+              {item.channelTitle || 'Unknown Artist'}
             </Text>
           </View>
-          <View style={styles.playChip}>
-            <CustomIcons name="play" type="FontAwesome5" size={10} color={AppColors.WHITE} />
+          <View style={styles.playChipAbs}>
+            <CustomIcons name="play" type="FontAwesome5" size={12} color={AppColors.WHITE} />
           </View>
         </LinearGradient>
       </TouchableOpacity>
     ),
-    [],
+    [tracks],
   );
 
-  const renderTrendingItem = useCallback(
+  const renderPlaylistRow = useCallback(
     ({ item, index }: any) => (
       <TouchableOpacity
         style={styles.trendingRow}
         activeOpacity={0.8}
-        onPress={() =>
-          navigation.navigate('Player', {
-            song: {
-              title: item.title,
-              channelTitle: item.artist,
-              thumbnail: null,
-              video_id: item.id,
-            },
-          })
-        }>
+        onPress={() => navigation.navigate('PlaylistDetail', { playlist: item })}>
         <Text style={styles.trendingRank}>#{index + 1}</Text>
-        <View style={styles.trendingEmojiBg}>
-          <Text style={{ fontSize: 22 }}>{item.emoji}</Text>
-        </View>
+        <LinearGradient
+          colors={[AppColors.NeonPurple + '80', AppColors.VibrantPink + '80']}
+          style={styles.trendingEmojiBg}>
+          <CustomIcons name="musical-notes" type="Ionicons" size={20} color={AppColors.WHITE} />
+        </LinearGradient>
         <View style={styles.trendingMeta}>
           <Text style={styles.trendingTitle} numberOfLines={1}>
-            {item.title}
+            {item.name}
           </Text>
-          <Text style={styles.trendingArtist}>{item.artist}</Text>
+          <Text style={styles.trendingArtist}>{item.trackCount || 0} tracks</Text>
         </View>
-        <Text style={styles.trendingPlays}>{item.plays}</Text>
-        <CustomIcons name="play-circle" type="Ionicons" size={28} color={AppColors.NeonPurple} />
+        <CustomIcons name="chevron-forward" type="Ionicons" size={20} color={AppColors.SubtleGray} />
       </TouchableOpacity>
     ),
     [],
@@ -162,11 +132,14 @@ const getLatestMusicList = async () => {
 
       {/* Sticky animated header */}
       <Animated.View style={[styles.header, { backgroundColor: headerBg, paddingTop: insets.top + 10 }]}>
-        <View>
-          <Text style={styles.greeting}>{greeting} 👋</Text>
-          <Text style={styles.headerTitle}>
-            Music<Text style={{ color: AppColors.NeonPurple }}>Ninja</Text>
-          </Text>
+        <View style={styles.headerLeft}>
+          <Image source={require('../../assets/images/logo.jpg')} style={styles.logoImage} />
+          <View>
+            <Text style={styles.greeting}>{greeting} 👋</Text>
+            <Text style={styles.headerTitle}>
+              Music<Text style={{ color: AppColors.NeonPurple }}>Ninja</Text>
+            </Text>
+          </View>
         </View>
         <TouchableOpacity
           style={styles.searchIconBtn}
@@ -184,31 +157,41 @@ const getLatestMusicList = async () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: insets.top + 80, paddingBottom: 110 }}>
 
-        {/* Featured */}
+        {/* Saved Downloads */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAll}>See all</Text>
+          <Text style={styles.sectionTitle}>Recently Saved Tracks</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Playlist')}>
+            <Text style={styles.seeAll}>Library</Text>
           </TouchableOpacity>
         </View>
-        <FlatList
-          data={FEATURED}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={i => i.id}
-          renderItem={renderFeaturedCard}
-          contentContainerStyle={styles.featuredList}
-        />
+        {tracks.length > 0 ? (
+          <FlatList
+            data={tracks.slice(0, 10)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={i => i.video_id}
+            renderItem={renderDownloadedCard}
+            contentContainerStyle={styles.featuredList}
+          />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No saved tracks yet. Go to Search to download some music!</Text>
+          </View>
+        )}
 
-        {/* Trending */}
+        {/* Playlists */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Trending 🔥</Text>
-          <TouchableOpacity>
+          <Text style={styles.sectionTitle}>Your Playlists 🎶</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Playlist')}>
             <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.trendingContainer}>
-          {TRENDING.map((item, index) => renderTrendingItem({ item, index }))}
+          {playlists.length > 0 ? (
+            playlists.slice(0, 5).map((item, index) => renderPlaylistRow({ item, index }))
+          ) : (
+            <Text style={[styles.emptyText, { padding: 20 }]}>Create playlists in your Library to see them here.</Text>
+          )}
         </View>
 
         {/* Genres placeholder */}
@@ -249,9 +232,21 @@ const styles = StyleSheet.create({
     zIndex: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 12,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  logoImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: AppColors.NeonPurple,
   },
   greeting: {
     fontSize: 12,
@@ -259,7 +254,7 @@ const styles = StyleSheet.create({
     fontFamily: AppFonts.MulishLight,
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
     color: AppColors.WHITE,
     fontFamily: AppFonts.MulishBold,
@@ -296,22 +291,27 @@ const styles = StyleSheet.create({
   featuredList: { paddingHorizontal: 16, gap: 12 },
   featuredCard: {
     width: CARD_W,
-    height: CARD_W * 1.2,
-    borderRadius: 20,
+    height: CARD_W * 1.1,
+    borderRadius: 16,
     overflow: 'hidden',
+    backgroundColor: AppColors.GlassWhite,
   },
   featuredGradient: {
     flex: 1,
-    padding: 14,
+    padding: 12,
     justifyContent: 'space-between',
   },
-  featuredEmoji: { fontSize: 36 },
-  featuredInfo: {},
+  featuredInfo: {
+    marginTop: 'auto',
+  },
   featuredTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: AppColors.WHITE,
     fontFamily: AppFonts.MulishBold,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   featuredArtist: {
     fontSize: 12,
@@ -319,14 +319,18 @@ const styles = StyleSheet.create({
     fontFamily: AppFonts.MulishRegular,
     marginTop: 2,
   },
-  playChip: {
-    alignSelf: 'flex-end',
+  playChipAbs: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   trendingContainer: {
     marginHorizontal: 16,
@@ -345,17 +349,16 @@ const styles = StyleSheet.create({
     borderBottomColor: AppColors.GlassBorder,
   },
   trendingRank: {
-    width: 28,
+    width: 24,
     fontSize: 12,
     color: AppColors.NeonPurple,
     fontFamily: AppFonts.MulishBold,
     fontWeight: '700',
   },
   trendingEmojiBg: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    backgroundColor: AppColors.GlassWhite,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -373,12 +376,6 @@ const styles = StyleSheet.create({
     fontFamily: AppFonts.MulishRegular,
     marginTop: 2,
   },
-  trendingPlays: {
-    fontSize: 11,
-    color: AppColors.SubtleGray,
-    fontFamily: AppFonts.MulishLight,
-    marginRight: 10,
-  },
   genreList: { paddingHorizontal: 16, gap: 10 },
   genreChip: {
     paddingHorizontal: 20,
@@ -392,5 +389,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: AppColors.WHITE,
     fontFamily: AppFonts.MulishSemiBold,
+  },
+  emptyContainer: {
+    marginHorizontal: 20,
+    padding: 20,
+    backgroundColor: AppColors.GlassWhite,
+    borderRadius: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
+  },
+  emptyText: {
+    color: AppColors.DimGray,
+    fontFamily: AppFonts.MulishRegular,
+    textAlign: 'center',
+    fontSize: 13,
+    lineHeight: 20,
   },
 });

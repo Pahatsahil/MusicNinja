@@ -11,23 +11,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 
 const TABS: Record<number, { icon: iconsType; label: string }> = {
-  // 0: {
-  //   icon: { name: 'home', type: 'Ionicons', size: 22 },
-  //   label: 'Home',
-  // },
   0: {
+    icon: { name: 'home', type: 'Ionicons', size: 22 },
+    label: 'Home',
+  },
+  1: {
     icon: { name: 'search-outline', type: 'Ionicons', size: 22 },
     label: 'Search',
   },
-  1: {
+  2: {
     icon: { name: 'library-outline', type: 'Ionicons', size: 22 },
     label: 'Library',
   },
 };
 
-const CustomBottomTabs: React.FC<BottomTabBarProps> = ({ navigation, state }) => {
+const CustomBottomTabs: React.FC<BottomTabBarProps & { hasMiniPlayer?: boolean }> = ({ navigation, state, hasMiniPlayer }) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const miniPlayerOffset = hasMiniPlayer ? 68 : 0;
 
   return (
     <View
@@ -36,6 +37,7 @@ const CustomBottomTabs: React.FC<BottomTabBarProps> = ({ navigation, state }) =>
         {
           paddingBottom: insets.bottom + 8,
           backgroundColor: AppColors.DeepPurple,
+          marginBottom: 0,
         },
       ]}>
       {state.routeNames.map((item: string, index: number) => {

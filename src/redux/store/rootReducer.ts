@@ -7,6 +7,7 @@ import { galleryReducer } from '@redux/slices/gallery';
 import { postsReducer } from '@redux/slices/posts';
 import { searchReducer } from '@redux/slices/search';
 import { subscriptionReducer } from '@redux/slices/subscription';
+import { playerReducer } from '@redux/slices/player/playerSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -17,6 +18,7 @@ const rootReducer = combineReducers({
   posts: postsReducer,
   search: searchReducer,
   subscription: subscriptionReducer,
+  player: playerReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;
