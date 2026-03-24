@@ -15,46 +15,139 @@ import AppColors from '@constants/AppColors';
 import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
 import useMusicPlayer from '@hooks/music/useMusicPlayer';
+import useDownloadedTracks from '@hooks/music/useDownloadedTracks';
 import { downloadMusic } from '@api/music/musicApi';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppDispatch } from '@redux/store/hooks';
+import { showToast } from '@redux/slices/toast/toastSlice';
 
 const { width, height } = Dimensions.get('window');
 const ARTWORK_SIZE = width * 0.75;
 
+const formatTime = (seconds: number) => {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
 const Player = ({ route, navigation }: any) => {
   const { song } = route.params;
-  const { playSound2, stopSound, soundLoader, isPlaying } = useMusicPlayer();
+  const {
+    playSound2,
+    stopSound,
+    pauseSound,
+    resumeSound,
+    soundLoader,
+    isPlaying,
+    playerStatus,
+    completed,
+  } = useMusicPlayer();
+  const { getCachedPath, saveTrack } = useDownloadedTracks();
+  const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
 
+  // ─── UI state ───────────────────────────────────────────────
   const [isLiked, setIsLiked] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
-  const [repeatMode, setRepeat] = useState(0); // 0=off, 1=one, 2=all
+  const [repeatMode, setRepeat] = useState<0 | 1 | 2>(0);
+  const [isPaused, setIsPaused] = useState(false); // true when paused (not stopped)
+  const [downloading, setDownloading] = useState(false); // initial download in progress
 
-  // artwork breathing animation
+  // ─── Artwork animation ───────────────────────────────────────
   const artworkScale = useRef(new Animated.Value(1)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (isPlaying) {
-      Animated.spring(artworkScale, { toValue: 1.06, useNativeDriver: true, friction: 8 }).start();
-    } else {
-      Animated.spring(artworkScale, { toValue: 1, useNativeDriver: true, friction: 8 }).start();
-    }
+    Animated.spring(artworkScale, {
+      toValue: isPlaying ? 1.06 : 1,
+      useNativeDriver: true,
+      friction: 8,
+    }).start();
   }, [isPlaying]);
 
-  const handlePlayPause = useCallback(async () => {
-    if (isPlaying) {
-      stopSound();
-    } else {
-      const path = await downloadMusic(song.video_id);
-      playSound2('file://' + path);
-    }
-  }, [isPlaying, song]);
+  // ─── Auto-start on mount ─────────────────────────────────────
+  useEffect(() => {
+    handlePlay();
+  }, []);
 
-  const goBack = () => {
-    if (isPlaying) stopSound();
+  // ─── Handle playback completion ──────────────────────────────
+  useEffect(() => {
+    if (completed === true) {
+      setIsPaused(false);
+      if (repeatMode === 1) {
+        // Repeat one — replay the same track
+        handlePlay();
+      }
+    }
+  }, [completed]);
+
+  // ─── Core play logic: cache-first ────────────────────────────
+  const handlePlay = useCallback(async () => {
+    try {
+      setDownloading(true);
+
+      // 1. Check Realm cache
+      let filePath = await getCachedPath(song.video_id);
+
+      // 2. If not cached, download and save
+      if (!filePath) {
+        filePath = await downloadMusic(song.video_id);
+        await saveTrack(song, filePath);
+      } else {
+        console.log('Cache hit:', filePath);
+      }
+
+      await playSound2('file://' + filePath);
+      setIsPaused(false);
+    } catch (err: any) {
+      dispatch(showToast({ message: 'Failed to load track. Try again.', type: 'error' }));
+      console.error('handlePlay error:', err?.message);
+    } finally {
+      setDownloading(false);
+    }
+  }, [song, getCachedPath, saveTrack, playSound2]);
+
+  // ─── Play / Pause / Resume toggle ────────────────────────────
+  const handlePlayPause = useCallback(async () => {
+    if (downloading || soundLoader) return;
+    console.log('isPlaying', isPlaying);
+    console.log('isPaused', isPaused);
+    if (!isPlaying && !isPaused) {
+      // Nothing playing — start fresh
+      await handlePlay();
+    } else if (isPlaying && !isPaused) {
+      // Pause
+      await pauseSound();
+      setIsPaused(true);
+    } else if (isPaused && isPlaying) {
+      // Resume
+      await resumeSound();
+      setIsPaused(false);
+    }
+  }, [downloading, soundLoader, isPlaying, isPaused, handlePlay, pauseSound, resumeSound]);
+
+  // ─── Stop ────────────────────────────────────────────────────
+  const handleStop = useCallback(async () => {
+    await stopSound();
+    setIsPaused(false);
+  }, [stopSound]);
+
+  const goBack = async () => {
+    await handleStop();
     navigation.goBack();
   };
+
+  // ─── Progress bar ─────────────────────────────────────────────
+  const { elapsedTime, duration } = playerStatus;
+  const progressPct = duration > 0 ? Math.min(elapsedTime / duration, 1) : 0;
+  const progressBarWidth = (width - 48) * progressPct; // 48 = paddingHorizontal*2
+
+  const isLoading = downloading || soundLoader;
+  const playIconName = isLoading
+    ? 'loading1'
+    : isPlaying
+    ? 'pausecircle'
+    : 'play-circle';
 
   const hasThumbnail = !!song.thumbnail;
 
@@ -68,11 +161,9 @@ const Player = ({ route, navigation }: any) => {
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFillObject}
       />
-
-      {/* Glow behind artwork */}
       <View style={styles.glowBehind} />
 
-      {/* Top bar */}
+      {/* ── Top bar ── */}
       <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={styles.iconBtn} onPress={goBack}>
           <CustomIcons name="chevron-down" type="Ionicons" size={22} color={AppColors.WHITE} />
@@ -80,6 +171,9 @@ const Player = ({ route, navigation }: any) => {
 
         <View style={styles.topCenter}>
           <Text style={styles.topLabel}>NOW PLAYING</Text>
+          <Text style={styles.topSub} numberOfLines={1}>
+            {song.channelTitle || 'Unknown Artist'}
+          </Text>
         </View>
 
         <TouchableOpacity style={styles.iconBtn}>
@@ -87,7 +181,7 @@ const Player = ({ route, navigation }: any) => {
         </TouchableOpacity>
       </View>
 
-      {/* Artwork */}
+      {/* ── Artwork ── */}
       <View style={styles.artworkWrap}>
         <Animated.View style={[styles.artworkShadow, { transform: [{ scale: artworkScale }] }]}>
           {hasThumbnail ? (
@@ -100,9 +194,19 @@ const Player = ({ route, navigation }: any) => {
             </LinearGradient>
           )}
         </Animated.View>
+
+        {/* Loading overlay on artwork */}
+        {isLoading && (
+          <View style={styles.artworkLoadingOverlay}>
+            <ActivityIndicator size="large" color={AppColors.WHITE} />
+            <Text style={styles.loadingText}>
+              {downloading ? 'Downloading…' : 'Buffering…'}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* Song info + like */}
+      {/* ── Song info + like ── */}
       <View style={styles.songInfoRow}>
         <View style={styles.songInfoText}>
           <Text style={styles.songTitle} numberOfLines={1}>
@@ -124,89 +228,118 @@ const Player = ({ route, navigation }: any) => {
         </TouchableOpacity>
       </View>
 
-      {/* Progress bar (visual only) */}
+      {/* ── Progress bar (real data from playerStatus) ── */}
       <View style={styles.progressContainer}>
         <View style={styles.progressTrack}>
           <LinearGradient
             colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.progressFill}
+            style={[styles.progressFill, { width: progressBarWidth }]}
           />
-          <View style={styles.progressThumb} />
+          <View style={[styles.progressThumb, { left: progressBarWidth - 6 }]} />
         </View>
         <View style={styles.timeRow}>
-          <Text style={styles.timeText}>0:00</Text>
-          <Text style={styles.timeText}>3:45</Text>
+          <Text style={styles.timeText}>{formatTime(elapsedTime)}</Text>
+          <Text style={styles.timeText}>{formatTime(duration)}</Text>
         </View>
       </View>
 
-      {/* Controls */}
+      {/* ── Controls ── */}
       <View style={styles.controlsRow}>
         {/* Shuffle */}
-        <TouchableOpacity onPress={() => setIsShuffle(v => !v)} style={styles.controlSide}>
+        <TouchableOpacity
+          onPress={() => setIsShuffle(v => !v)}
+          style={styles.controlSide}
+          activeOpacity={0.7}>
           <CustomIcons
             name="shuffle"
             type="Ionicons"
             size={22}
             color={isShuffle ? AppColors.NeonPurple : AppColors.SubtleGray}
           />
+          {isShuffle && <View style={styles.activeDot} />}
         </TouchableOpacity>
 
         {/* Prev */}
-        <TouchableOpacity style={styles.controlBtn}>
-          <CustomIcons name="play-skip-back" type="Ionicons" size={28} color={AppColors.WHITE} />
+        <TouchableOpacity style={styles.controlBtn} activeOpacity={0.7} onPress={handleStop}>
+          <CustomIcons name="play-skip-back" type="Ionicons" size={30} color={AppColors.WHITE} />
         </TouchableOpacity>
 
-        {/* Play/Pause */}
-        <TouchableOpacity style={styles.playBtn} onPress={handlePlayPause} activeOpacity={0.8}>
+        {/* Play / Pause */}
+        <TouchableOpacity
+          style={styles.playBtn}
+          onPress={handlePlayPause}
+          activeOpacity={0.8}
+          disabled={isLoading}>
           <LinearGradient
-            colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
+            colors={isLoading
+              ? [AppColors.DimGray as string, AppColors.DimGray as string]
+              : [AppColors.NeonPurple, AppColors.VibrantPink]}
             style={styles.playBtnInner}>
-            {soundLoader ? (
+            {isLoading ? (
               <ActivityIndicator size="small" color={AppColors.WHITE} />
             ) : (
               <CustomIcons
-                name={isPlaying ? 'pause' : 'play'}
+                name={!isPaused ? 'pause' : 'play'}
                 type="FontAwesome5"
-                size={24}
+                size={26}
                 color={AppColors.WHITE}
               />
             )}
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Next */}
-        <TouchableOpacity style={styles.controlBtn}>
-          <CustomIcons name="play-skip-forward" type="Ionicons" size={28} color={AppColors.WHITE} />
+        {/* Next (replays current in this single-track player) */}
+        <TouchableOpacity style={styles.controlBtn} activeOpacity={0.7} onPress={handlePlay}>
+          <CustomIcons name="play-skip-forward" type="Ionicons" size={30} color={AppColors.WHITE} />
         </TouchableOpacity>
 
         {/* Repeat */}
         <TouchableOpacity
           style={styles.controlSide}
-          onPress={() => setRepeat(r => (r + 1) % 3)}>
+          onPress={() => setRepeat(r => ((r + 1) % 3) as 0 | 1 | 2)}
+          activeOpacity={0.7}>
           <CustomIcons
             name={repeatMode === 1 ? 'repeat-once' : 'repeat'}
             type="MaterialCommunityIcons"
             size={22}
             color={repeatMode > 0 ? AppColors.NeonPurple : AppColors.SubtleGray}
           />
+          {repeatMode > 0 && <View style={styles.activeDot} />}
         </TouchableOpacity>
       </View>
 
-      {/* Bottom actions */}
+      {/* ── Bottom actions ── */}
       <View style={[styles.bottomActions, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity style={styles.actionBtn}>
-          <CustomIcons name="list-music" type="MaterialCommunityIcons" size={22} color={AppColors.SubtleGray} />
+          <CustomIcons
+            name="list-music"
+            type="MaterialCommunityIcons"
+            size={22}
+            color={AppColors.SubtleGray}
+          />
           <Text style={styles.actionLabel}>Queue</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.actionBtn}>
-          <CustomIcons name="share-social-outline" type="Ionicons" size={22} color={AppColors.SubtleGray} />
+          <CustomIcons
+            name="share-social-outline"
+            type="Ionicons"
+            size={22}
+            color={AppColors.SubtleGray}
+          />
           <Text style={styles.actionLabel}>Share</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.actionBtn}>
-          <CustomIcons name="download-outline" type="Ionicons" size={22} color={AppColors.SubtleGray} />
-          <Text style={styles.actionLabel}>Save</Text>
+          <CustomIcons
+            name="download-outline"
+            type="Ionicons"
+            size={22}
+            color={AppColors.SubtleGray}
+          />
+          <Text style={styles.actionLabel}>Saved</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -241,6 +374,12 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
+  topSub: {
+    fontSize: 13,
+    color: AppColors.SubtleGray,
+    fontFamily: AppFonts.MulishRegular,
+    marginTop: 2,
+  },
   iconBtn: {
     width: 38,
     height: 38,
@@ -251,6 +390,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // Artwork
   artworkWrap: {
     alignItems: 'center',
     marginTop: 20,
@@ -271,6 +412,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   artworkEmoji: { fontSize: 80 },
+  artworkLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    // match the artworkShadow position
+    top: 0,
+    left: (width - ARTWORK_SIZE) / 2,
+    width: ARTWORK_SIZE,
+    height: ARTWORK_SIZE,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: AppColors.WHITE,
+    fontFamily: AppFonts.MulishSemiBold,
+  },
+
+  // Song info
   songInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -302,6 +463,8 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   likeBtnActive: { borderColor: AppColors.VibrantPink },
+
+  // Progress
   progressContainer: {
     paddingHorizontal: 24,
     marginBottom: 32,
@@ -310,20 +473,22 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: AppColors.GlassWhite,
     borderRadius: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
+    position: 'relative',
   },
   progressFill: {
     height: 4,
-    width: '38%',
     borderRadius: 2,
+    position: 'absolute',
+    left: 0,
+    top: 0,
   },
   progressThumb: {
     width: 12,
     height: 12,
     borderRadius: 6,
     backgroundColor: AppColors.WHITE,
-    marginLeft: -1,
+    position: 'absolute',
+    top: -4,
     shadowColor: AppColors.WHITE,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
@@ -332,13 +497,15 @@ const styles = StyleSheet.create({
   timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 12,
   },
   timeText: {
     fontSize: 12,
     color: AppColors.DimGray,
     fontFamily: AppFonts.MulishRegular,
   },
+
+  // Controls
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -346,8 +513,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     marginBottom: 36,
   },
-  controlSide: { width: 40, alignItems: 'center' },
+  controlSide: { width: 44, alignItems: 'center' },
   controlBtn: { width: 50, alignItems: 'center' },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: AppColors.NeonPurple,
+    marginTop: 4,
+  },
   playBtn: {
     shadowColor: AppColors.NeonPurple,
     shadowOffset: { width: 0, height: 8 },
@@ -356,12 +530,14 @@ const styles = StyleSheet.create({
     elevation: 16,
   },
   playBtnInner: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // Bottom actions
   bottomActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',

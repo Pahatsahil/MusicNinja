@@ -4,7 +4,7 @@ import {StyleProp} from 'react-native';
 import {TextStyle} from 'react-native';
 import {useTheme} from '@utills/ThemeContext';
 
-import MaskedView from '@react-native-masked-view/masked-view';
+// import MaskedView from '@react-native-masked-view/masked-view';
 import LinearGradient from 'react-native-linear-gradient';
 import AppColors from '@constants/AppColors';
 
@@ -44,8 +44,8 @@ export const GradientText = ({
   color?: Array<any>;
 }) => {
   return (
-    <MaskedView
-      maskElement={<Text style={[styles.maskedText, textStyle]}>{text}</Text>}>
+    // <MaskedView
+    //   maskElement={<Text style={[styles.maskedText, textStyle]}>{text}</Text>}>
       <LinearGradient
         colors={
           color ? color : [AppColors?.THEME_PURPLE, AppColors?.THEME_PINK]
@@ -59,7 +59,7 @@ export const GradientText = ({
           {text}
         </Text>
       </LinearGradient>
-    </MaskedView>
+    // </MaskedView>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,77 +6,48 @@ import {
   TouchableOpacity,
   FlatList,
   StatusBar,
+  Image,
+  Alert,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import AppColors from '@constants/AppColors';
 import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const PLAYLISTS = [
-  {
-    id: '1',
-    name: 'Chill Vibes',
-    count: 18,
-    emoji: ['🌊', '🎶', '🌙', '✨'],
-    gradient: ['#1a1a2e', '#11998e'],
-  },
-  {
-    id: '2',
-    name: 'Workout Bangers',
-    count: 24,
-    emoji: ['💪', '🔥', '⚡', '🎸'],
-    gradient: ['#fc466b', '#3f5efb'],
-  },
-  {
-    id: '3',
-    name: 'Late Night Drive',
-    count: 12,
-    emoji: ['🚗', '🌆', '🎵', '🌃'],
-    gradient: ['#2d1b69', '#6F2ECF'],
-  },
-  {
-    id: '4',
-    name: 'Top Hits 2025',
-    count: 40,
-    emoji: ['⭐', '🏆', '🎤', '🎧'],
-    gradient: ['#C44DFF', '#6F2ECF'],
-  },
-];
+import useDownloadedTracks from '@hooks/music/useDownloadedTracks';
+import SongItem from '@components/SongItem';
+import { useNavigation } from '@react-navigation/native';
 
 const PlaylistScreen = () => {
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<'playlists' | 'albums' | 'artists'>('playlists');
+  const navigation = useNavigation<any>();
+  const { tracks, removeTrack } = useDownloadedTracks();
+  const [activeTab, setActiveTab] = useState<'downloads' | 'playlists' | 'artists'>('downloads');
 
-  const renderPlaylist = ({ item }: any) => (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85}>
-      {/* Thumbnail 2x2 grid */}
-      <LinearGradient colors={item.gradient} style={styles.thumbnailGrid}>
-        <View style={styles.gridRow}>
-          {item.emoji.slice(0, 2).map((e: string, i: number) => (
-            <View key={i} style={styles.gridCell}>
-              <Text style={{ fontSize: 22 }}>{e}</Text>
-            </View>
-          ))}
-        </View>
-        <View style={styles.gridRow}>
-          {item.emoji.slice(2, 4).map((e: string, i: number) => (
-            <View key={i} style={styles.gridCell}>
-              <Text style={{ fontSize: 22 }}>{e}</Text>
-            </View>
-          ))}
-        </View>
-      </LinearGradient>
+  const handleTrackPress = (item: any) => {
+    navigation.navigate('Player', { song: item });
+  };
 
-      <View style={styles.cardMeta}>
-        <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.cardCount}>{item.count} songs</Text>
-      </View>
+  const handleLongPress = (item: any) => {
+    Alert.alert(
+      'Remove Download',
+      `Are you sure you want to remove "${item.title}" from your downloads?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Remove', 
+          style: 'destructive', 
+          onPress: () => removeTrack(item.video_id, true) 
+        },
+      ]
+    );
+  };
 
-      <TouchableOpacity style={styles.cardMenu}>
-        <CustomIcons name="ellipsis-vertical" type="Ionicons" size={18} color={AppColors.SubtleGray} />
-      </TouchableOpacity>
-    </TouchableOpacity>
+  const renderTrack = ({ item }: { item: any }) => (
+    <SongItem 
+      item={item} 
+      onPress={() => handleTrackPress(item)}
+    />
   );
 
   return (
@@ -92,7 +63,9 @@ const PlaylistScreen = () => {
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <View>
           <Text style={styles.headerTitle}>Your Library</Text>
-          <Text style={styles.headerSub}>{PLAYLISTS.length} playlists</Text>
+          <Text style={styles.headerSub}>
+            {activeTab === 'downloads' ? `${tracks.length} tracks saved` : '0 items'}
+          </Text>
         </View>
         <TouchableOpacity style={styles.addBtn}>
           <LinearGradient
@@ -105,7 +78,7 @@ const PlaylistScreen = () => {
 
       {/* Tabs */}
       <View style={styles.tabRow}>
-        {(['playlists', 'albums', 'artists'] as const).map(tab => (
+        {(['downloads', 'playlists', 'artists'] as const).map(tab => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
@@ -125,24 +98,44 @@ const PlaylistScreen = () => {
         ))}
       </View>
 
-      {/* Playlist list */}
-      {activeTab === 'playlists' ? (
-        <FlatList
-          data={PLAYLISTS}
-          keyExtractor={i => i.id}
-          renderItem={renderPlaylist}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 100 }}
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        />
+      {/* Content */}
+      {activeTab === 'downloads' ? (
+        tracks.length > 0 ? (
+          <FlatList
+            data={tracks}
+            keyExtractor={i => i.video_id}
+            renderItem={renderTrack}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>📥</Text>
+            <Text style={styles.emptyTitle}>No downloads yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Search for your favorite music and play it to save it locally for offline listening.
+            </Text>
+            <TouchableOpacity 
+              style={styles.exploreBtn}
+              onPress={() => navigation.navigate('Search')}
+            >
+              <LinearGradient
+                colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
+                style={styles.exploreBtnInner}
+              >
+                <Text style={styles.exploreText}>Explore Music</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )
       ) : (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>{activeTab === 'albums' ? '💿' : '🎤'}</Text>
+          <Text style={styles.emptyEmoji}>{activeTab === 'playlists' ? '🎶' : '🎤'}</Text>
           <Text style={styles.emptyTitle}>
             No {activeTab} yet
           </Text>
           <Text style={styles.emptySubtitle}>
-            Search and save music to build your {activeTab} collection
+            Coming soon! You'll be able to create custom {activeTab} in the next update.
           </Text>
         </View>
       )}
@@ -214,48 +207,12 @@ const styles = StyleSheet.create({
   },
   tabLabelActive: { color: AppColors.WHITE, fontFamily: AppFonts.MulishBold },
 
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: AppColors.GlassWhite,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: AppColors.GlassBorder,
-    padding: 12,
-    gap: 14,
-  },
-  thumbnailGrid: {
-    width: 60,
-    height: 60,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  gridRow: { flex: 1, flexDirection: 'row' },
-  gridCell: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardMeta: { flex: 1 },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: AppColors.WHITE,
-    fontFamily: AppFonts.MulishSemiBold,
-  },
-  cardCount: {
-    fontSize: 12,
-    color: AppColors.DimGray,
-    fontFamily: AppFonts.MulishRegular,
-    marginTop: 3,
-  },
-  cardMenu: { padding: 6 },
-
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 40,
+    paddingBottom: 60,
   },
   emptyEmoji: { fontSize: 60, marginBottom: 16 },
   emptyTitle: {
@@ -272,5 +229,23 @@ const styles = StyleSheet.create({
     fontFamily: AppFonts.MulishLight,
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 30,
+  },
+  exploreBtn: {
+    shadowColor: AppColors.NeonPurple,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  exploreBtnInner: {
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 30,
+  },
+  exploreText: {
+    color: AppColors.WHITE,
+    fontFamily: AppFonts.MulishBold,
+    fontSize: 16,
   },
 });

@@ -10,11 +10,11 @@ const BottomTab = createBottomTabNavigator();
 function BottomTabNavigators() {
   return (
     <BottomTab.Navigator
-      initialRouteName={screenNames.Home}
+      initialRouteName={screenNames.Search}
       screenOptions={{ headerShown: false }}
       tabBar={props => <CustomBottomTabs {...props} />}
     >
-      <BottomTab.Screen name={screenNames.Home} component={Home} />
+      {/* <BottomTab.Screen name={screenNames.Home} component={Home} /> */}
       <BottomTab.Screen name={screenNames.Search} component={Search} />
       <BottomTab.Screen name={screenNames.Playlist} component={PlaylistScreen} />
     </BottomTab.Navigator>

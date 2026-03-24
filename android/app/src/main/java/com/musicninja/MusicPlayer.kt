@@ -142,6 +142,7 @@ class MusicPlayer(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
                     if (!player.isPlaying) {
                         player.start()
                         isPlaying = true
+                        startPlaybackUpdates()
                         promise.resolve(true)
                         return@launch
                     }

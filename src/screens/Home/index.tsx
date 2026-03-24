@@ -16,6 +16,7 @@ import AppColors from '@constants/AppColors';
 import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getLatestMusic } from '@api/music/musicApi';
 
 const { width } = Dimensions.get('window');
 const CARD_W = width * 0.44;
@@ -68,8 +69,16 @@ const HomeScreen = ({ navigation }: any) => {
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 17) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
+    getLatestMusicList()
   }, []);
-
+const getLatestMusicList = async () => {
+  try {
+ const data = await getLatestMusic()
+  console.log("DATA",data)   
+  } catch (error) {
+    console.log(error)
+  }
+}
   const headerBg = scrollY.interpolate({
     inputRange: [0, 80],
     outputRange: ['transparent', AppColors.DeepPurple],

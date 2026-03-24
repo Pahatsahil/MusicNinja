@@ -5,8 +5,8 @@ import { useAppDispatch } from '@redux/store/hooks';
 import { showToast } from '@redux/slices/toast/toastSlice';
 import { useFocusEffect } from '@react-navigation/native';
 
-const { AudioPlayer } = NativeModules;
-const AudioPlayerEvents = new NativeEventEmitter(AudioPlayer);
+const { MusicPlayer } = NativeModules;
+const MusicPlayerEvents = new NativeEventEmitter(MusicPlayer);
 
 const useMusicPlayer = () => {
     const dispatch = useAppDispatch();
@@ -26,7 +26,7 @@ const useMusicPlayer = () => {
 
     useEffect(() => {
         // Subscribe to playback status updates
-        const statusSubscription = AudioPlayerEvents.addListener(
+        const statusSubscription = MusicPlayerEvents.addListener(
             'onPlaybackStatus',
             status => {
                 if (PLATFORM_IOS && status?.status === 'started') {
@@ -41,7 +41,7 @@ const useMusicPlayer = () => {
         );
 
         // Subscribe to playback completion event
-        const completionSubscription = AudioPlayerEvents.addListener(
+        const completionSubscription = MusicPlayerEvents.addListener(
             'onPlaybackComplete',
             data => {
                 setIsPlaying(false);
@@ -66,7 +66,7 @@ const useMusicPlayer = () => {
             completionSubscription.remove();
 
             // Stop playback if something is still playing
-            AudioPlayer?.stopPlayback()
+            MusicPlayer?.stopPlayback()
                 .then(() => {
                     setIsPlaying(false);
                     setSoundLoader(false);
@@ -80,8 +80,8 @@ const useMusicPlayer = () => {
     const playSoundIos = async (uri: string) => {
         try {
             setSoundLoader(true);
-            AudioPlayer?.convertWavToM4a(uri).then(async (newUri: string) => {
-                const sound = await AudioPlayer?.playAudio(newUri);
+            MusicPlayer?.convertWavToM4a(uri).then(async (newUri: string) => {
+                const sound = await MusicPlayer?.playAudio(newUri);
                 console.log('enter in play', uri, sound, newUri);
             });
         } catch (error) {
@@ -93,9 +93,9 @@ const useMusicPlayer = () => {
         console.log('this si s', uri);
         try {
             setSoundLoader(true);
-            // AudioPlayer?.convertWavToM4a(uri).then(async (newUri: string) => {
+            // MusicPlayer?.convertWavToM4a(uri).then(async (newUri: string) => {
 
-            const sound = await AudioPlayer?.playAudio(uri);
+            const sound = await MusicPlayer?.playAudio(uri);
             console.log('enter in play', uri, sound);
         } catch (error) {
             console.log('ERROR PLAY', error);
@@ -105,13 +105,13 @@ const useMusicPlayer = () => {
 
     const pauseSound = async () => {
         if (isPlaying) {
-            await AudioPlayer?.pauseAudio();
+            await MusicPlayer?.pauseAudio();
         }
     };
 
     const resumeSound = async () => {
         if (isPlaying) {
-            await AudioPlayer?.resumeAudio();
+            await MusicPlayer?.resumeAudio();
         }
     };
 
@@ -119,7 +119,7 @@ const useMusicPlayer = () => {
         if (isPlaying) {
             setIsPlaying(false);
             setSoundLoader(false);
-            await AudioPlayer?.stopPlayback();
+            await MusicPlayer?.stopPlayback();
         }
     };
 

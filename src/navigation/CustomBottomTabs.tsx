@@ -11,15 +11,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 
 const TABS: Record<number, { icon: iconsType; label: string }> = {
+  // 0: {
+  //   icon: { name: 'home', type: 'Ionicons', size: 22 },
+  //   label: 'Home',
+  // },
   0: {
-    icon: { name: 'home', type: 'Ionicons', size: 22 },
-    label: 'Home',
-  },
-  1: {
     icon: { name: 'search-outline', type: 'Ionicons', size: 22 },
     label: 'Search',
   },
-  2: {
+  1: {
     icon: { name: 'library-outline', type: 'Ionicons', size: 22 },
     label: 'Library',
   },
