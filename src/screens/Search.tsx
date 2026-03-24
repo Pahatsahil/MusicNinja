@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, FlatList } from 'react-native';
-import { searchMusic } from '../api/api';
 import SongItem from '../components/SongItem';
+import { searchMusic } from '@api/music/musicApi';
 
 const Search = ({ navigation }: any) => {
   const [query, setQuery] = useState('');
@@ -9,6 +9,7 @@ const Search = ({ navigation }: any) => {
 
   const handleSearch = async () => {
     const res = await searchMusic(query);
+    console.log(res);
     setResults(res);
   };
 

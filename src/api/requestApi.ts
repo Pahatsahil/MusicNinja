@@ -1,7 +1,5 @@
-import {AxiosError, AxiosRequestConfig, AxiosResponse} from 'axios';
+import { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import axiosInstance from './apiService';
-import {getKeychain} from '@utills/HandleKeychainStorage';
-import {setAsyncStorage} from '@utills/AsyncStorage';
 
 interface iPrevApiDetails {
   url: string;
@@ -14,8 +12,8 @@ const handleError = (error: AxiosError) => {
     // ✅ Ensure `data` is an object before accessing properties
     const errorMessage =
       typeof error.response.data === 'object' && error.response.data !== null
-        ? (error.response.data as {message?: string}).message ||
-          'An error occurred.'
+        ? (error.response.data as { message?: string }).message ||
+        'An error occurred.'
         : 'An error occurred.';
 
     requestAnimationFrame(() => {
@@ -106,20 +104,20 @@ const requestApi = {
   },
   refreshTokenApi: async <T>(): Promise<void> => {
     try {
-      const refreshToken = await getKeychain('refreshToken');
-      console.log(refreshToken, 'resToken');
-      const response = await axiosInstance.post<{accessToken: string}>(
-        'user/rotate-token',
-        {refreshToken},
-      );
-      console.log('res.daa', response.data);
-      const newAccessToken = response.data.accessToken;
-      if (newAccessToken) {
-        await setAsyncStorage('accessToken', newAccessToken);
+      // const refreshToken = await getKeychain('refreshToken');
+      // console.log(refreshToken, 'resToken');
+      // const response = await axiosInstance.post<{accessToken: string}>(
+      //   'user/rotate-token',
+      //   {refreshToken},
+      // );
+      // console.log('res.daa', response.data);
+      // const newAccessToken = response.data.accessToken;
+      // if (newAccessToken) {
+      //   await setAsyncStorage('accessToken', newAccessToken);
 
-        // Update Axios default header
-        axiosInstance.defaults.headers.common['Authorization'] = newAccessToken;
-      }
+      //   // Update Axios default header
+      //   axiosInstance.defaults.headers.common['Authorization'] = newAccessToken;
+      // }
     } catch (error: any) {
       handleError(error);
       throw error.response?.data || 'An error occurred';

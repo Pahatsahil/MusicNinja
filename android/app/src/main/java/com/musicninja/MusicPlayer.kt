@@ -111,6 +111,29 @@ class MusicPlayer(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
         }
     }
 
+   @ReactMethod
+    fun seekTo(positionInSeconds: Double, promise: Promise) {
+        scope.launch {
+            try {
+                mediaPlayer?.let { player ->
+                    val positionMs = (positionInSeconds * 1000).toInt()
+                    
+                    // Validate position
+                    if (positionMs in 0..player.duration) {
+                        player.seekTo(positionMs)
+                        promise.resolve(true)
+                    } else {
+                        promise.reject("SEEK_ERROR", "Invalid seek position")
+                    }
+                } ?: run {
+                    promise.reject("SEEK_ERROR", "No active player")
+                }
+            } catch (e: Exception) {
+                promise.reject("SEEK_ERROR", "Seek failed: ${e.message}")
+            }
+        }
+    }
+
     @ReactMethod
     fun resumeAudio(promise: Promise) {
         scope.launch {

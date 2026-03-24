@@ -6,15 +6,18 @@ import store from '@redux/store/store';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from '@utills/ThemeContext';
 import { Toast } from '@components/common';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const App = () => {
   return (
     <Provider store={store}>
       <GestureHandlerRootView>
         <ThemeProvider>
-          <NavigationContainer>
-            <MainNavigator />
-          </NavigationContainer>
+          <SafeAreaProvider>
+            <NavigationContainer>
+              <MainNavigator />
+            </NavigationContainer>
+          </SafeAreaProvider>
           <Toast />
         </ThemeProvider>
       </GestureHandlerRootView>

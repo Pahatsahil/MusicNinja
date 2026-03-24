@@ -4,6 +4,7 @@ import RNFS from 'react-native-fs'
 const LOCAL_IP = 'http://192.168.29.27:6000'; // your Flask server IP
 
 export const searchMusic = async (query: string) => {
+    console.log(query, LOCAL_IP)
     const res = await fetch(`${LOCAL_IP}/search?q=${query}`);
     const data = await res.json();
     return data.results;
