@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import CustomBottomTabs from './CustomBottomTabs';
 import screenNames from './screenNames';
-import { Home, Player, Search } from '@screens/index';
+import { Home, Search } from '@screens/index';
+import PlaylistScreen from '@screens/Playlist';
 
 const BottomTab = createBottomTabNavigator();
 
@@ -15,7 +16,7 @@ function BottomTabNavigators() {
     >
       <BottomTab.Screen name={screenNames.Home} component={Home} />
       <BottomTab.Screen name={screenNames.Search} component={Search} />
-      <BottomTab.Screen name={screenNames.Player} component={Player} />
+      <BottomTab.Screen name={screenNames.Playlist} component={PlaylistScreen} />
     </BottomTab.Navigator>
   );
 }

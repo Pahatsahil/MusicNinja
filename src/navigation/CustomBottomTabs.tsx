@@ -1,63 +1,46 @@
-import {Image, StyleSheet, TouchableOpacity, View} from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 import React from 'react';
-import {BottomTabBarProps} from '@react-navigation/bottom-tabs';
-import AppStyles from '@constants/AppStyles';
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import AppColors from '@constants/AppColors';
-import {CustomIcons} from '@components/common';
-import {iconsType} from '@components/common/CustomIcons';
-import {useTheme} from '@utills/ThemeContext';
-import Svg, {Circle} from 'react-native-svg';
-import {useAppSelector} from '@redux/store/hooks';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import AppFonts from '@constants/AppFonts';
+import { CustomIcons } from '@components/common';
+import { iconsType } from '@components/common/CustomIcons';
+import { useTheme } from '@utills/ThemeContext';
+import Svg, { Circle } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 
-const icon: Record<number, iconsType> = {
+const TABS: Record<number, { icon: iconsType; label: string }> = {
   0: {
-    name: 'home',
-    type: 'SimpleLineIcons',
-    // type: 'Octicons',
-    size: 22,
+    icon: { name: 'home', type: 'Ionicons', size: 22 },
+    label: 'Home',
   },
   1: {
-    name: 'search1',
-    type: 'AntDesign',
-    // type: 'Octicons',
-    size: 22,
+    icon: { name: 'search-outline', type: 'Ionicons', size: 22 },
+    label: 'Search',
   },
   2: {
-    name: 'mic-outline',
-    type: 'Ionicons',
-    size: 25,
-    // name: 'microphone-outline',
-    // type: 'MaterialCommunityIcons',
-  },
-  3: {
-    name: 'picture',
-    type: 'SimpleLineIcons',
-    size: 22,
-  },
-  4: {
-    name: 'user',
-    type: 'AntDesign',
-    size: 22,
+    icon: { name: 'library-outline', type: 'Ionicons', size: 22 },
+    label: 'Library',
   },
 };
 
-const CustomBottomTabs: React.FC<BottomTabBarProps> = ({navigation, state}) => {
-  const {theme} = useTheme();
-  const {profileImage} = useAppSelector(state => state.auth);
+const CustomBottomTabs: React.FC<BottomTabBarProps> = ({ navigation, state }) => {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+
   return (
     <View
       style={[
-        AppStyles.rowBetween,
         styles.container,
         {
-          backgroundColor: theme.BACKGROUND,
-          paddingBottom: insets?.bottom + 10,
+          paddingBottom: insets.bottom + 8,
+          backgroundColor: AppColors.DeepPurple,
         },
       ]}>
       {state.routeNames.map((item: string, index: number) => {
         const isFocused = state.index === index;
+        const tab = TABS[index];
 
         const handlePress = () => {
           const event = navigation.emit({
@@ -65,7 +48,6 @@ const CustomBottomTabs: React.FC<BottomTabBarProps> = ({navigation, state}) => {
             target: state.routes[index].key,
             canPreventDefault: true,
           });
-
           if (!isFocused && !event.defaultPrevented) {
             navigation.navigate(state.routeNames[index]);
           }
@@ -75,24 +57,28 @@ const CustomBottomTabs: React.FC<BottomTabBarProps> = ({navigation, state}) => {
           <TouchableOpacity
             key={index}
             style={styles.item}
-            onPress={handlePress}>
-            {/* If user add Image show that instead of Icon  */}
-            {index == 4 && profileImage ? (
-              <Image
-                source={{uri: profileImage}}
-                style={{
-                  height: 25,
-                  width: 25,
-                  resizeMode: 'contain',
-                  borderRadius: 13,
-                }}
-              />
+            onPress={handlePress}
+            activeOpacity={0.75}>
+            {isFocused ? (
+              <LinearGradient
+                colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
+                style={styles.activeIconWrap}>
+                <CustomIcons
+                  {...tab.icon}
+                  color={AppColors.WHITE}
+                />
+              </LinearGradient>
             ) : (
-              <CustomIcons {...icon[index]} />
+              <View style={styles.iconWrap}>
+                <CustomIcons
+                  {...tab.icon}
+                  color={AppColors.SubtleGray}
+                />
+              </View>
             )}
-            <Svg width={8} height={8} fill="none" style={{marginTop: 5}}>
-              {isFocused && <Circle cx={4} cy={4} r={4} fill="#672DC2" />}
-            </Svg>
+            <Text style={[styles.label, isFocused && styles.labelActive]}>
+              {tab.label}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -104,27 +90,45 @@ export default React.memo(CustomBottomTabs);
 
 const styles = StyleSheet.create({
   container: {
-    // backgroundColor: AppColors.BottomTab,
+    flexDirection: 'row',
     paddingTop: 10,
-    paddingHorizontal: 15,
-    paddingBottom: 15,
-    elevation: 10,
-    shadowOffset: {
-      width: 20,
-      height: 20,
-    },
-    shadowRadius: 1,
+    paddingHorizontal: 10,
+    borderTopWidth: 1,
+    borderTopColor: AppColors.GlassBorder,
   },
   item: {
-    justifyContent: 'center',
+    flex: 1,
     alignItems: 'center',
-    // backgroundColor: 'red',
-    width: '20%',
+    paddingVertical: 4,
   },
-  focus: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 5,
+  iconWrap: {
+    width: 46,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeIconWrap: {
+    width: 46,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: AppColors.NeonPurple,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  label: {
+    fontSize: 10,
+    color: AppColors.SubtleGray,
+    fontFamily: AppFonts.MulishRegular,
+    marginTop: 4,
+  },
+  labelActive: {
+    color: AppColors.WHITE,
+    fontFamily: AppFonts.MulishBold,
+    fontWeight: '700',
   },
 });

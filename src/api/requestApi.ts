@@ -34,6 +34,7 @@ const requestApi = {
       const response = await axiosInstance.get<T>(url, config);
       return response.data;
     } catch (error: any) {
+      console.log("GET ERROR",error)
       if (error.response?.status === 401) {
         await requestApi.refreshTokenApi();
         console.log('AET API ER', error.response?.status === 401);
@@ -71,9 +72,10 @@ const requestApi = {
   ): Promise<AxiosResponse<T>> => {
     try {
       const response = await axiosInstance.post<T>(url, payload, config);
-      // console.log('======response=======', response)
+      console.log('======response=======', response)
       return response;
     } catch (error: any) {
+      console.log("pOST ERROR",error)
       if (error.response?.status === 401) {
         await requestApi.refreshTokenApi();
         const retryResponse = await axiosInstance.post<T>(url, payload, config);

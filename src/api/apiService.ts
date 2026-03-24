@@ -9,7 +9,7 @@ import axios, {
 import { getAsyncStorage } from '@utills/AsyncStorage';
 
 
-const LOCAL_IP = 'http://192.168.29.27:6000'; // your Flask server IP
+const LOCAL_IP = 'http://192.168.29.180:6000'; // your Flask server IP
 
 const axiosInstance: AxiosInstance = axios.create({
   // baseURL: 'https://itmcloud.org/silent-screamer/api/',
