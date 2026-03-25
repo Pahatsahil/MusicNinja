@@ -6,8 +6,6 @@ import axios, {
   AxiosResponse,
 } from 'axios';
 // import {BASE_URL} from '@env';
-import { getAsyncStorage } from '@utills/AsyncStorage';
-
 
 const LOCAL_IP = 'http://192.168.29.180:6000'; // your Flask server IP
 

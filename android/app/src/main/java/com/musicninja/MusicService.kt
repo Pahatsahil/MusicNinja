@@ -105,6 +105,12 @@ class MusicService : Service() {
         try { unregisterReceiver(actionReceiver) } catch (_: Exception) {}
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        stopPlaybackInternal()
+        stopSelf()
+    }
+
     // ─── MediaSession setup ──────────────────────────────────────────────────
     private fun setupMediaSession() {
         mediaSession = MediaSessionCompat(this, "MusicNinja").apply {
@@ -225,6 +231,13 @@ class MusicService : Service() {
         isPlaying = false
         abandonAudioFocus()
         updatePlaybackState(PlaybackStateCompat.STATE_STOPPED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+        stopSelf()
     }
 
     fun updateNowPlaying(title: String, artist: String, thumbnail: String) {

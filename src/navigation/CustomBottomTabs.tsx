@@ -25,7 +25,9 @@ const TABS: Record<number, { icon: iconsType; label: string }> = {
   },
 };
 
-const CustomBottomTabs: React.FC<BottomTabBarProps & { hasMiniPlayer?: boolean }> = ({ navigation, state, hasMiniPlayer }) => {
+const CustomBottomTabs: React.FC<
+  BottomTabBarProps & { hasMiniPlayer?: boolean }
+> = ({ navigation, state, hasMiniPlayer }) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const miniPlayerOffset = hasMiniPlayer ? 68 : 0;
@@ -39,7 +41,8 @@ const CustomBottomTabs: React.FC<BottomTabBarProps & { hasMiniPlayer?: boolean }
           backgroundColor: AppColors.DeepPurple,
           marginBottom: 0,
         },
-      ]}>
+      ]}
+    >
       {state.routeNames.map((item: string, index: number) => {
         const isFocused = state.index === index;
         const tab = TABS[index];
@@ -60,22 +63,18 @@ const CustomBottomTabs: React.FC<BottomTabBarProps & { hasMiniPlayer?: boolean }
             key={index}
             style={styles.item}
             onPress={handlePress}
-            activeOpacity={0.75}>
+            activeOpacity={0.75}
+          >
             {isFocused ? (
               <LinearGradient
                 colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-                style={styles.activeIconWrap}>
-                <CustomIcons
-                  {...tab.icon}
-                  color={AppColors.WHITE}
-                />
+                style={styles.activeIconWrap}
+              >
+                <CustomIcons {...tab.icon} color={AppColors.WHITE} />
               </LinearGradient>
             ) : (
               <View style={styles.iconWrap}>
-                <CustomIcons
-                  {...tab.icon}
-                  color={AppColors.SubtleGray}
-                />
+                <CustomIcons {...tab.icon} color={AppColors.SubtleGray} />
               </View>
             )}
             <Text style={[styles.label, isFocused && styles.labelActive]}>

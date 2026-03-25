@@ -25,11 +25,12 @@ const MINI_HEIGHT = 68;
 const MiniPlayer = () => {
   const dispatch = useAppDispatch();
   const navigation = useNavigation<any>();
-  const { currentTrack, isPlaying, isPaused, queue, queueIndex } = useAppSelector(s => s.player);
+  const { currentTrack, isPlaying, isPaused, queue, queueIndex } =
+    useAppSelector(s => s.player);
   const { pauseSound, resumeSound, stopSound } = useMusicPlayer();
   const slideAnim = useRef(new Animated.Value(MINI_HEIGHT + 10)).current;
   const hasTrack = !!currentTrack;
-    const {bottom}=useSafeAreaInsets()
+  const { bottom } = useSafeAreaInsets();
 
   // Slide up when track becomes active
   useEffect(() => {
@@ -41,18 +42,57 @@ const MiniPlayer = () => {
     }).start();
   }, [hasTrack]);
 
+  const dragY = useRef(new Animated.Value(0)).current;
+  const isDragging = useRef(false);
+
   const panResponder = useRef(
     PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return gestureState.dy > 10;
+        // Only hijack if clearly dragging down, not a tap
+        return Math.abs(gestureState.dy) > 8 && gestureState.dy > 0;
       },
-      onPanResponderRelease: async (_, gestureState) => {
-        if (gestureState.dy > 50) {
-          await stopSound();
-          dispatch(clearQueue());
+      onPanResponderGrant: () => {
+        isDragging.current = true;
+        dragY.setValue(0);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          // Follow finger downward
+          dragY.setValue(gestureState.dy);
         }
       },
-    })
+      onPanResponderRelease: async (_, gestureState) => {
+        isDragging.current = false;
+        if (gestureState.dy > 50) {
+          // Animate out then clear
+          Animated.timing(dragY, {
+            toValue: MINI_HEIGHT + 100,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(async () => {
+            dragY.setValue(0);
+            await stopSound();
+            dispatch(clearQueue());
+          });
+        } else {
+          // Snap back
+          Animated.spring(dragY, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 8,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: (_, gestureState) => {
+        // Snap back if interrupted
+        Animated.spring(dragY, {
+          toValue: 0,
+          useNativeDriver: true,
+          friction: 8,
+        }).start();
+      },
+    }),
   ).current;
 
   if (!currentTrack) return null;
@@ -77,13 +117,22 @@ const MiniPlayer = () => {
   };
 
   return (
-    <Animated.View {...panResponder.panHandlers} style={[styles.wrapper, { transform: [{ translateY: slideAnim }], }]}>
+    <Animated.View
+      {...panResponder.panHandlers}
+      style={[
+        styles.wrapper,
+        {
+          transform: [{ translateY: dragY }, { translateY: slideAnim }],
+          bottom: bottom + 75,
+        },
+      ]}
+    >
       <LinearGradient
         colors={[AppColors.DeepPurple, AppColors.RichPurple]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={styles.container}>
-
+        style={styles.container}
+      >
         {/* Progress glow line at top */}
         <LinearGradient
           colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
@@ -93,20 +142,32 @@ const MiniPlayer = () => {
         />
 
         {/* Artwork */}
-        <TouchableOpacity onPress={handleOpenPlayer} style={styles.artworkWrap} activeOpacity={0.8}>
+        <TouchableOpacity
+          onPress={handleOpenPlayer}
+          style={styles.artworkWrap}
+          activeOpacity={0.8}
+        >
           {hasThumbnail ? (
-            <Image source={{ uri: currentTrack.thumbnail }} style={styles.artwork} />
+            <Image
+              source={{ uri: currentTrack.thumbnail }}
+              style={styles.artwork}
+            />
           ) : (
             <LinearGradient
               colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-              style={styles.artworkPlaceholder}>
+              style={styles.artworkPlaceholder}
+            >
               <Text style={styles.artworkEmoji}>🎵</Text>
             </LinearGradient>
           )}
         </TouchableOpacity>
 
         {/* Track info */}
-        <TouchableOpacity style={styles.infoWrap} onPress={handleOpenPlayer} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.infoWrap}
+          onPress={handleOpenPlayer}
+          activeOpacity={0.7}
+        >
           <Text style={styles.title} numberOfLines={1}>
             {currentTrack.title || 'Unknown Track'}
           </Text>
@@ -117,10 +178,15 @@ const MiniPlayer = () => {
 
         {/* Controls */}
         <View style={styles.controls}>
-          <TouchableOpacity onPress={handlePlayPause} style={styles.playBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={handlePlayPause}
+            style={styles.playBtn}
+            activeOpacity={0.7}
+          >
             <LinearGradient
               colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-              style={styles.playBtnInner}>
+              style={styles.playBtnInner}
+            >
               <CustomIcons
                 name={isPlaying && !isPaused ? 'pause' : 'play'}
                 type="FontAwesome5"
@@ -131,7 +197,11 @@ const MiniPlayer = () => {
           </TouchableOpacity>
 
           {hasNext && (
-            <TouchableOpacity onPress={handleNext} style={styles.nextBtn} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={handleNext}
+              style={styles.nextBtn}
+              activeOpacity={0.7}
+            >
               <CustomIcons
                 name="play-skip-forward"
                 type="Ionicons"
@@ -150,7 +220,7 @@ export default MiniPlayer;
 
 const styles = StyleSheet.create({
   wrapper: {
-    // position: 'absolute',
+    position: 'absolute',
     // bottom: 0,
     left: 0,
     right: 0,
