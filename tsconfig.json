@@ -8,6 +8,7 @@
       "@components/*": ["components/*"],
       "@constants/*": ["constants/*"],
       "@hooks/*": ["hooks/*"],
+      "@native/*": ["native/*"],
       "@navigation/*": ["navigation/*"],
       "@redux/*": ["redux/*"],
       "@screens/*": ["screens/*"],

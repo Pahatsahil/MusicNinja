@@ -16,7 +16,7 @@ import AppColors from '@constants/AppColors';
 import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getLatestMusic } from '@api/music/musicApi';
+import { losslessApi } from '@api/LosslessAPI';
 import useDownloadedTracks from '@hooks/music/useDownloadedTracks';
 import usePlaylists from '@hooks/music/usePlaylists';
 import { useAppDispatch } from '@redux/store/hooks';
@@ -34,6 +34,8 @@ const HomeScreen = ({ navigation }: any) => {
   const { tracks } = useDownloadedTracks();
   const { playlists, refreshPlaylists } = usePlaylists();
 
+  const [trendingTracks, setTrendingTracks] = useState<any[]>([]);
+
   useEffect(() => {
     refreshPlaylists();
   }, []);
@@ -48,9 +50,10 @@ const HomeScreen = ({ navigation }: any) => {
 
   const getLatestMusicList = async () => {
     try {
-      const data = await getLatestMusic();
+      const data = await losslessApi.searchTracks('Trending');
+      setTrendingTracks(data?.items?.slice(0, 10) || []);
     } catch (error) {
-      console.log(error);
+      console.log('Error fetching trending:', error);
     }
   };
 
@@ -61,7 +64,12 @@ const HomeScreen = ({ navigation }: any) => {
   });
 
   const handlePlayDownloadedTrack = (item: any) => {
-    dispatch(setQueue({ queue: tracks, startIndex: tracks.findIndex(t => t.video_id === item.video_id) }));
+    dispatch(
+      setQueue({
+        queue: trendingTracks,
+        startIndex: trendingTracks.findIndex(t => t.id === item.id),
+      }),
+    );
     navigation.navigate('Player', { song: item });
   };
 
@@ -70,31 +78,46 @@ const HomeScreen = ({ navigation }: any) => {
       <TouchableOpacity
         activeOpacity={0.85}
         style={styles.featuredCard}
-        onPress={() => handlePlayDownloadedTrack(item)}>
-        {item.thumbnail ? (
-          <Image source={{ uri: item.thumbnail }} style={StyleSheet.absoluteFillObject} />
+        onPress={() => handlePlayDownloadedTrack(item)}
+      >
+        {item.thumbnail || item.album?.cover ? (
+          <Image
+            source={{
+              uri: item.thumbnail || losslessApi.getCoverUrl(item.album.cover),
+            }}
+            style={StyleSheet.absoluteFillObject}
+          />
         ) : (
-          <LinearGradient colors={[AppColors.DeepBlack, AppColors.RichPurple]} style={StyleSheet.absoluteFillObject} />
+          <LinearGradient
+            colors={[AppColors.DeepBlack, AppColors.RichPurple]}
+            style={StyleSheet.absoluteFillObject}
+          />
         )}
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.8)']}
-          style={styles.featuredGradient}>
+          style={styles.featuredGradient}
+        >
           <View style={{ flex: 1 }} />
           <View style={styles.featuredInfo}>
             <Text style={styles.featuredTitle} numberOfLines={1}>
-              {item.title}
+              {item.title || 'Unknown Title'}
             </Text>
             <Text style={styles.featuredArtist} numberOfLines={1}>
-              {item.channelTitle || 'Unknown Artist'}
+              {item.channelTitle || item.artist?.name || 'Unknown Artist'}
             </Text>
           </View>
           <View style={styles.playChipAbs}>
-            <CustomIcons name="play" type="FontAwesome5" size={12} color={AppColors.WHITE} />
+            <CustomIcons
+              name="play"
+              type="FontAwesome5"
+              size={12}
+              color={AppColors.WHITE}
+            />
           </View>
         </LinearGradient>
       </TouchableOpacity>
     ),
-    [tracks],
+    [trendingTracks],
   );
 
   const renderPlaylistRow = useCallback(
@@ -102,20 +125,36 @@ const HomeScreen = ({ navigation }: any) => {
       <TouchableOpacity
         style={styles.trendingRow}
         activeOpacity={0.8}
-        onPress={() => navigation.navigate('PlaylistDetail', { playlist: item })}>
+        onPress={() =>
+          navigation.navigate('PlaylistDetail', { playlist: item })
+        }
+      >
         <Text style={styles.trendingRank}>#{index + 1}</Text>
         <LinearGradient
           colors={[AppColors.NeonPurple + '80', AppColors.VibrantPink + '80']}
-          style={styles.trendingEmojiBg}>
-          <CustomIcons name="musical-notes" type="Ionicons" size={20} color={AppColors.WHITE} />
+          style={styles.trendingEmojiBg}
+        >
+          <CustomIcons
+            name="musical-notes"
+            type="Ionicons"
+            size={20}
+            color={AppColors.WHITE}
+          />
         </LinearGradient>
         <View style={styles.trendingMeta}>
           <Text style={styles.trendingTitle} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={styles.trendingArtist}>{item.trackCount || 0} tracks</Text>
+          <Text style={styles.trendingArtist}>
+            {item.trackCount || 0} tracks
+          </Text>
         </View>
-        <CustomIcons name="chevron-forward" type="Ionicons" size={20} color={AppColors.SubtleGray} />
+        <CustomIcons
+          name="chevron-forward"
+          type="Ionicons"
+          size={20}
+          color={AppColors.SubtleGray}
+        />
       </TouchableOpacity>
     ),
     [],
@@ -123,17 +162,33 @@ const HomeScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
       <LinearGradient
-        colors={[AppColors.DeepBlack, AppColors.DeepPurple, AppColors.DeepBlack]}
+        colors={[
+          AppColors.DeepBlack,
+          AppColors.DeepPurple,
+          AppColors.DeepBlack,
+        ]}
         locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFillObject}
       />
 
       {/* Sticky animated header */}
-      <Animated.View style={[styles.header, { backgroundColor: headerBg, paddingTop: insets.top + 10 }]}>
+      <Animated.View
+        style={[
+          styles.header,
+          { backgroundColor: headerBg, paddingTop: insets.top + 10 },
+        ]}
+      >
         <View style={styles.headerLeft}>
-          <Image source={require('../../assets/images/logo.jpg')} style={styles.logoImage} />
+          <Image
+            source={require('../../assets/images/logo.jpg')}
+            style={styles.logoImage}
+          />
           <View>
             <Text style={styles.greeting}>{greeting} 👋</Text>
             <Text style={styles.headerTitle}>
@@ -143,8 +198,14 @@ const HomeScreen = ({ navigation }: any) => {
         </View>
         <TouchableOpacity
           style={styles.searchIconBtn}
-          onPress={() => navigation.navigate('Search')}>
-          <CustomIcons name="search1" type="AntDesign" size={20} color={AppColors.WHITE} />
+          onPress={() => navigation.navigate('Search')}
+        >
+          <CustomIcons
+            name="search1"
+            type="AntDesign"
+            size={20}
+            color={AppColors.WHITE}
+          />
         </TouchableOpacity>
       </Animated.View>
 
@@ -155,27 +216,30 @@ const HomeScreen = ({ navigation }: any) => {
         )}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: insets.top + 80, paddingBottom: 110 }}>
-
-        {/* Saved Downloads */}
+        contentContainerStyle={{
+          paddingTop: insets.top + 80,
+          paddingBottom: 110,
+        }}
+      >
+        {/* Trending Tracks */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recently Saved Tracks</Text>
+          <Text style={styles.sectionTitle}>Trending Tracks</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Playlist')}>
             <Text style={styles.seeAll}>Library</Text>
           </TouchableOpacity>
         </View>
-        {tracks.length > 0 ? (
+        {trendingTracks.length > 0 ? (
           <FlatList
-            data={tracks.slice(0, 10)}
+            data={trendingTracks}
             horizontal
             showsHorizontalScrollIndicator={false}
-            keyExtractor={i => i.video_id}
+            keyExtractor={i => String(i.id || i.video_id)}
             renderItem={renderDownloadedCard}
             contentContainerStyle={styles.featuredList}
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No saved tracks yet. Go to Search to download some music!</Text>
+            <Text style={styles.emptyText}>Loading trends...</Text>
           </View>
         )}
 
@@ -188,9 +252,13 @@ const HomeScreen = ({ navigation }: any) => {
         </View>
         <View style={styles.trendingContainer}>
           {playlists.length > 0 ? (
-            playlists.slice(0, 5).map((item, index) => renderPlaylistRow({ item, index }))
+            playlists
+              .slice(0, 5)
+              .map((item, index) => renderPlaylistRow({ item, index }))
           ) : (
-            <Text style={[styles.emptyText, { padding: 20 }]}>Create playlists in your Library to see them here.</Text>
+            <Text style={[styles.emptyText, { padding: 20 }]}>
+              Create playlists in your Library to see them here.
+            </Text>
           )}
         </View>
 
@@ -198,7 +266,11 @@ const HomeScreen = ({ navigation }: any) => {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Browse Genres</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.genreList}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.genreList}
+        >
           {[
             { label: 'Hip-Hop', color: '#fc466b' },
             { label: 'Pop', color: '#6F2ECF' },
@@ -209,7 +281,8 @@ const HomeScreen = ({ navigation }: any) => {
             <TouchableOpacity key={g.label} activeOpacity={0.8}>
               <LinearGradient
                 colors={[g.color + 'CC', g.color + '55']}
-                style={styles.genreChip}>
+                style={styles.genreChip}
+              >
                 <Text style={styles.genreLabel}>{g.label}</Text>
               </LinearGradient>
             </TouchableOpacity>

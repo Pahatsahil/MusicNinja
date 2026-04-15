@@ -16,7 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import AppColors from '@constants/AppColors';
 import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
-import { searchMusic } from '@api/music/musicApi';
+import { losslessApi } from '@api/LosslessAPI';
 import SongItem from '@components/SongItem';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -34,12 +34,18 @@ const Search = ({ navigation }: any) => {
 
   const handleFocus = () => {
     setFocused(true);
-    Animated.timing(barAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+    Animated.timing(barAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
   };
   const handleBlur = () => {
-    Animated.timing(barAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start(() =>
-      setFocused(false),
-    );
+    Animated.timing(barAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start(() => setFocused(false));
   };
 
   React.useEffect(() => {
@@ -61,28 +67,38 @@ const Search = ({ navigation }: any) => {
     outputRange: [AppColors.GlassBorder, AppColors.NeonPurple],
   });
 
-  const handleSearch = useCallback(async (q?: string) => {
-    const term = q ?? query;
-    if (!term.trim()) return;
+  const handleSearch = useCallback(
+    async (q?: string) => {
+      const term = q ?? query;
+      if (!term.trim()) return;
 
-    // Save recent search
-    setRecentSearches(prev => {
-      const updated = [term.trim(), ...prev.filter(s => s.toLowerCase() !== term.trim().toLowerCase())].slice(0, 5);
-      AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated)).catch(() => {});
-      return updated;
-    });
+      // Save recent search
+      setRecentSearches(prev => {
+        const updated = [
+          term.trim(),
+          ...prev.filter(s => s.toLowerCase() !== term.trim().toLowerCase()),
+        ].slice(0, 5);
+        AsyncStorage.setItem(
+          RECENT_SEARCHES_KEY,
+          JSON.stringify(updated),
+        ).catch(() => {});
+        return updated;
+      });
 
-    Keyboard.dismiss();
-    setLoading(true);
-    try {
-      const res = await searchMusic(term);
-      setResults(res || []);
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [query]);
+      Keyboard.dismiss();
+      setLoading(true);
+      try {
+        const res = await losslessApi.searchTracks(term, { limit: 20 });
+        setResults(res?.items || []);
+      } catch (err) {
+        console.log('Search error:', err);
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [query],
+  );
 
   const handleClear = () => {
     setQuery('');
@@ -95,9 +111,17 @@ const Search = ({ navigation }: any) => {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
       <LinearGradient
-        colors={[AppColors.DeepBlack, AppColors.DeepPurple, AppColors.DeepBlack]}
+        colors={[
+          AppColors.DeepBlack,
+          AppColors.DeepPurple,
+          AppColors.DeepBlack,
+        ]}
         locations={[0, 0.4, 1]}
         style={StyleSheet.absoluteFillObject}
       />
@@ -108,7 +132,12 @@ const Search = ({ navigation }: any) => {
 
         {/* Search Bar */}
         <Animated.View style={[styles.searchBar, { borderColor }]}>
-          <CustomIcons name="search1" type="AntDesign" size={18} color={AppColors.SubtleGray} />
+          <CustomIcons
+            name="search1"
+            type="AntDesign"
+            size={18}
+            color={AppColors.SubtleGray}
+          />
           <TextInput
             ref={inputRef}
             placeholder="Songs, artists, podcasts..."
@@ -123,8 +152,16 @@ const Search = ({ navigation }: any) => {
             selectionColor={AppColors.NeonPurple}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={handleClear} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <CustomIcons name="closecircle" type="AntDesign" size={16} color={AppColors.DimGray} />
+            <TouchableOpacity
+              onPress={handleClear}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <CustomIcons
+                name="closecircle"
+                type="AntDesign"
+                size={16}
+                color={AppColors.DimGray}
+              />
             </TouchableOpacity>
           )}
         </Animated.View>
@@ -146,8 +183,17 @@ const Search = ({ navigation }: any) => {
               <TouchableOpacity
                 key={s}
                 style={styles.recentChip}
-                onPress={() => { setQuery(s); handleSearch(s); }}>
-                <CustomIcons name="history" type="MaterialIcons" size={14} color={AppColors.SubtleGray} />
+                onPress={() => {
+                  setQuery(s);
+                  handleSearch(s);
+                }}
+              >
+                <CustomIcons
+                  name="history"
+                  type="MaterialIcons"
+                  size={14}
+                  color={AppColors.SubtleGray}
+                />
                 <Text style={styles.recentText}>{s}</Text>
               </TouchableOpacity>
             ))}
@@ -162,7 +208,7 @@ const Search = ({ navigation }: any) => {
       ) : (
         <FlatList
           data={results}
-          keyExtractor={(item: any) => item.video_id}
+          keyExtractor={(item: any) => String(item.id || item.video_id)}
           renderItem={({ item }) => (
             <SongItem
               item={item}
@@ -210,7 +256,12 @@ const styles = StyleSheet.create({
     padding: 0,
   },
 
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
   loadingText: {
     fontSize: 14,
     color: AppColors.SubtleGray,

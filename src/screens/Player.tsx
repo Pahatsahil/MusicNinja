@@ -9,7 +9,6 @@ import {
   Dimensions,
   StatusBar,
   ActivityIndicator,
-  Alert,
   Modal,
   FlatList,
 } from 'react-native';
@@ -20,7 +19,7 @@ import { CustomIcons } from '@components/common';
 import useMusicPlayer from '@hooks/music/useMusicPlayer';
 import useDownloadedTracks from '@hooks/music/useDownloadedTracks';
 import usePlaylists from '@hooks/music/usePlaylists';
-import { downloadMusic } from '@api/music/musicApi';
+import { losslessApi } from '@api/LosslessAPI';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '@redux/store/hooks';
 import { showToast } from '@redux/slices/toast/toastSlice';
@@ -47,23 +46,23 @@ const formatTime = (seconds: number) => {
 const Player = ({ route, navigation }: any) => {
   const { song } = route.params;
   const dispatch = useAppDispatch();
-  const { isPlaying, isPaused, queue, queueIndex, repeatMode, shuffle } = useAppSelector(s => s.player);
+  const { isPlaying, isPaused, repeatMode, shuffle } = useAppSelector(
+    s => s.player,
+  );
 
-  const {
-    playSound,
-    pauseSound,
-    resumeSound,
-    stopSound,
-    updateNowPlaying,
-  } = useMusicPlayer();
-  const { getCachedPath, saveTrack } = useDownloadedTracks();
+  const { playSound, pauseSound, resumeSound, updateNowPlaying } =
+    useMusicPlayer();
+  const { getCachedPath } = useDownloadedTracks();
   const { playlists, addTrack } = usePlaylists();
   const insets = useSafeAreaInsets();
 
   const [isLiked, setIsLiked] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [soundLoader, setSoundLoader] = useState(false);
-  const [playerStatus, setPlayerStatus] = useState({ elapsedTime: 0, duration: 0 });
+  const [playerStatus, setPlayerStatus] = useState({
+    elapsedTime: 0,
+    duration: 0,
+  });
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
 
   // Track the song currently loaded in native player
@@ -71,7 +70,8 @@ const Player = ({ route, navigation }: any) => {
 
   const artworkScale = useRef(new Animated.Value(1)).current;
 
-  const currentDisplayTrack = useAppSelector(s => s.player.currentTrack) ?? song;
+  const currentDisplayTrack =
+    useAppSelector(s => s.player.currentTrack) ?? song;
 
   useEffect(() => {
     Animated.spring(artworkScale, {
@@ -79,29 +79,95 @@ const Player = ({ route, navigation }: any) => {
       useNativeDriver: true,
       friction: 8,
     }).start();
-  }, [isPlaying]);
+  }, [isPlaying, artworkScale]);
 
   // ─── Subscribe to native status events ────────────────────────────────────
   const { NativeModules, NativeEventEmitter } = require('react-native');
-  const MusicPlayerEvents = useRef(new NativeEventEmitter(NativeModules.MusicPlayer)).current;
+  const MusicPlayerEvents = useRef(
+    new NativeEventEmitter(NativeModules.MusicPlayer),
+  ).current;
 
   useEffect(() => {
-    const statusSub = MusicPlayerEvents.addListener('onPlaybackStatus', (status: any) => {
-      setSoundLoader(false);
-      setPlayerStatus({
-        elapsedTime: status.currentTime,
-        duration: status.duration,
-      });
-    });
+    const statusSub = MusicPlayerEvents.addListener(
+      'onPlaybackStatus',
+      (status: any) => {
+        setSoundLoader(false);
+        setPlayerStatus({
+          elapsedTime: status.currentTime,
+          duration: status.duration,
+        });
+      },
+    );
     return () => statusSub.remove();
   }, []);
 
+  const handlePlay = useCallback(
+    async (trackToPlay = currentDisplayTrack) => {
+      if (!trackToPlay) return;
+      try {
+        setSoundLoader(true);
+        setDownloading(true);
+
+        const trackId = String(trackToPlay.id || trackToPlay.video_id);
+        loadedVideoId.current = trackId;
+
+        let fileOrStreamPath = await getCachedPath(trackId);
+
+        if (!fileOrStreamPath) {
+          // Not downloaded, fetch streaming URL from LosslessAPI
+          fileOrStreamPath = await losslessApi.getStreamUrl(
+            trackId,
+            'HI_RES_LOSSLESS',
+          );
+        } else {
+          fileOrStreamPath = 'file://' + fileOrStreamPath;
+        }
+
+        await playSound(fileOrStreamPath?.url);
+        dispatch(setCurrentTrack(trackToPlay));
+        dispatch(setIsPlaying(true));
+
+        const title = trackToPlay.title || 'Unknown Track';
+        const artist =
+          trackToPlay.channelTitle ||
+          trackToPlay.artist?.name ||
+          'Unknown Artist';
+        const thumbnail =
+          trackToPlay.thumbnail ||
+          (trackToPlay.album?.cover
+            ? losslessApi.getCoverUrl(trackToPlay.album.cover)
+            : '');
+
+        // Update native lock screen / notification metadata
+        updateNowPlaying(title, artist, thumbnail);
+      } catch (err: any) {
+        dispatch(
+          showToast({
+            message: 'Failed to load track. Try again.',
+            type: 'error',
+          }),
+        );
+        console.error('handlePlay error:', err?.message);
+      } finally {
+        setDownloading(false);
+        setSoundLoader(false);
+      }
+    },
+    [getCachedPath, playSound, updateNowPlaying, dispatch, currentDisplayTrack],
+  );
+
   // ─── Auto-play current track whenever it changes ──────────────────────────
   useEffect(() => {
-    if (currentDisplayTrack && currentDisplayTrack.video_id !== loadedVideoId.current) {
+    const trackId = currentDisplayTrack?.id || currentDisplayTrack?.video_id;
+    if (currentDisplayTrack && trackId !== loadedVideoId.current) {
       handlePlay(currentDisplayTrack);
     }
-  }, [currentDisplayTrack?.video_id]);
+  }, [
+    currentDisplayTrack?.id,
+    currentDisplayTrack?.video_id,
+    currentDisplayTrack,
+    handlePlay,
+  ]);
 
   // ─── Initial play ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -109,40 +175,7 @@ const Player = ({ route, navigation }: any) => {
     if (!useAppSelector) return;
     dispatch(setCurrentTrack(song));
     handlePlay(song);
-  }, []);
-
-  // ─── Core play logic ──────────────────────────────────────────────────────
-  const handlePlay = useCallback(async (trackToPlay = currentDisplayTrack) => {
-    if (!trackToPlay) return;
-    try {
-      setSoundLoader(true);
-      setDownloading(true);
-      loadedVideoId.current = trackToPlay.video_id;
-
-      let filePath = await getCachedPath(trackToPlay.video_id);
-      if (!filePath) {
-        filePath = await downloadMusic(trackToPlay.video_id);
-        await saveTrack(trackToPlay, filePath);
-      }
-
-      await playSound('file://' + filePath);
-      dispatch(setCurrentTrack(trackToPlay));
-      dispatch(setIsPlaying(true));
-
-      // Update native lock screen / notification metadata
-      updateNowPlaying(
-        trackToPlay.title || 'Unknown Track',
-        trackToPlay.channelTitle || 'Unknown Artist',
-        trackToPlay.thumbnail,
-      );
-    } catch (err: any) {
-      dispatch(showToast({ message: 'Failed to load track. Try again.', type: 'error' }));
-      console.error('handlePlay error:', err?.message);
-    } finally {
-      setDownloading(false);
-      setSoundLoader(false);
-    }
-  }, [getCachedPath, saveTrack, playSound, updateNowPlaying, dispatch]);
+  }, [dispatch, handlePlay, song]);
 
   // ─── Play / Pause toggle ──────────────────────────────────────────────────
   const handlePlayPause = useCallback(async () => {
@@ -175,27 +208,59 @@ const Player = ({ route, navigation }: any) => {
 
   const isLoading = downloading || soundLoader;
 
-  const hasThumbnail = !!currentDisplayTrack?.thumbnail;
-
   // ─── Add to Playlist modal ─────────────────────────────────────────────────
   const handleAddToPlaylist = async (playlist: IPlaylist) => {
+    const trackId = currentDisplayTrack.id || currentDisplayTrack.video_id;
+    const title = currentDisplayTrack.title || 'Unknown Track';
+    const artistName =
+      currentDisplayTrack.channelTitle ||
+      currentDisplayTrack.artist?.name ||
+      '';
+    const thumbnailUrl =
+      currentDisplayTrack.thumbnail ||
+      (currentDisplayTrack.album?.cover
+        ? losslessApi.getCoverUrl(currentDisplayTrack.album.cover)
+        : '');
+
     await addTrack(playlist.id, {
-      video_id: currentDisplayTrack.video_id,
-      title: currentDisplayTrack.title,
-      channelTitle: currentDisplayTrack.channelTitle || '',
-      thumbnail: currentDisplayTrack.thumbnail || '',
-      filePath: loadedVideoId.current ? '' : '',
+      video_id: String(trackId),
+      title: title,
+      channelTitle: artistName,
+      thumbnail: thumbnailUrl,
+      filePath: '',
     });
     setShowPlaylistModal(false);
-    dispatch(showToast({ message: `Added to "${playlist.name}"`, type: 'success' }));
+    dispatch(
+      showToast({ message: `Added to "${playlist.name}"`, type: 'success' }),
+    );
   };
+
+  const currentDisplayTitle = currentDisplayTrack?.title || 'Unknown Track';
+  const currentDisplayArtist =
+    currentDisplayTrack?.channelTitle ||
+    currentDisplayTrack?.artist?.name ||
+    'Unknown Artist';
+  const currentDisplayThumbnail =
+    currentDisplayTrack?.thumbnail ||
+    (currentDisplayTrack?.album?.cover
+      ? losslessApi.getCoverUrl(currentDisplayTrack.album.cover)
+      : '');
+  const hasThumbnail = !!currentDisplayThumbnail;
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
       <LinearGradient
-        colors={[AppColors.DeepBlack, AppColors.RichPurple, AppColors.DeepBlack]}
+        colors={[
+          AppColors.DeepBlack,
+          AppColors.RichPurple,
+          AppColors.DeepBlack,
+        ]}
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFillObject}
       />
@@ -204,28 +269,53 @@ const Player = ({ route, navigation }: any) => {
       {/* ── Top bar ── */}
       <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={styles.iconBtn} onPress={goBack}>
-          <CustomIcons name="chevron-down" type="Ionicons" size={22} color={AppColors.WHITE} />
+          <CustomIcons
+            name="chevron-down"
+            type="Ionicons"
+            size={22}
+            color={AppColors.WHITE}
+          />
         </TouchableOpacity>
 
         <View style={styles.topCenter}>
           <Text style={styles.topLabel}>NOW PLAYING</Text>
           <Text style={styles.topSub} numberOfLines={1}>
-            {currentDisplayTrack?.channelTitle || 'Unknown Artist'}
+            {currentDisplayArtist}
           </Text>
         </View>
 
         <TouchableOpacity style={styles.iconBtn}>
-          <CustomIcons name="ellipsis-vertical" type="Ionicons" size={20} color={AppColors.WHITE} />
+          <CustomIcons
+            name="ellipsis-vertical"
+            type="Ionicons"
+            size={20}
+            color={AppColors.WHITE}
+          />
         </TouchableOpacity>
       </View>
 
       {/* ── Artwork ── */}
       <View style={styles.artworkWrap}>
-        <Animated.View style={[styles.artworkShadow, { transform: [{ scale: artworkScale }] }]}>
+        <Animated.View
+          style={[
+            styles.artworkShadow,
+            { transform: [{ scale: artworkScale }] },
+          ]}
+        >
           {hasThumbnail ? (
-            <Image source={{ uri: currentDisplayTrack.thumbnail }} style={styles.artwork} />
+            <Image
+              source={{ uri: currentDisplayThumbnail }}
+              style={styles.artwork}
+            />
           ) : (
-            <LinearGradient colors={[AppColors.NeonPurple, AppColors.VibrantPink, AppColors.DeepPurple]} style={styles.artwork}>
+            <LinearGradient
+              colors={[
+                AppColors.NeonPurple,
+                AppColors.VibrantPink,
+                AppColors.DeepPurple,
+              ]}
+              style={styles.artwork}
+            >
               <Text style={styles.artworkEmoji}>🎵</Text>
             </LinearGradient>
           )}
@@ -234,7 +324,9 @@ const Player = ({ route, navigation }: any) => {
         {isLoading && (
           <View style={styles.artworkLoadingOverlay}>
             <ActivityIndicator size="large" color={AppColors.WHITE} />
-            <Text style={styles.loadingText}>{downloading ? 'Downloading…' : 'Buffering…'}</Text>
+            <Text style={styles.loadingText}>
+              {downloading ? 'Downloading…' : 'Buffering…'}
+            </Text>
           </View>
         )}
       </View>
@@ -243,15 +335,16 @@ const Player = ({ route, navigation }: any) => {
       <View style={styles.songInfoRow}>
         <View style={styles.songInfoText}>
           <Text style={styles.songTitle} numberOfLines={1}>
-            {currentDisplayTrack?.title || 'Unknown Track'}
+            {currentDisplayTitle}
           </Text>
           <Text style={styles.songArtist} numberOfLines={1}>
-            {currentDisplayTrack?.channelTitle || 'Unknown Artist'}
+            {currentDisplayArtist}
           </Text>
         </View>
         <TouchableOpacity
           onPress={() => setIsLiked(v => !v)}
-          style={[styles.likeBtn, isLiked && styles.likeBtnActive]}>
+          style={[styles.likeBtn, isLiked && styles.likeBtnActive]}
+        >
           <CustomIcons
             name={isLiked ? 'heart' : 'heart-outline'}
             type="Ionicons"
@@ -270,7 +363,9 @@ const Player = ({ route, navigation }: any) => {
             end={{ x: 1, y: 0 }}
             style={[styles.progressFill, { width: progressBarWidth }]}
           />
-          <View style={[styles.progressThumb, { left: progressBarWidth - 6 }]} />
+          <View
+            style={[styles.progressThumb, { left: progressBarWidth - 6 }]}
+          />
         </View>
         <View style={styles.timeRow}>
           <Text style={styles.timeText}>{formatTime(elapsedTime)}</Text>
@@ -284,7 +379,8 @@ const Player = ({ route, navigation }: any) => {
         <TouchableOpacity
           onPress={() => dispatch(toggleShuffle())}
           style={styles.controlSide}
-          activeOpacity={0.7}>
+          activeOpacity={0.7}
+        >
           <CustomIcons
             name="shuffle"
             type="Ionicons"
@@ -295,8 +391,17 @@ const Player = ({ route, navigation }: any) => {
         </TouchableOpacity>
 
         {/* Prev */}
-        <TouchableOpacity style={styles.controlBtn} activeOpacity={0.7} onPress={handlePrev}>
-          <CustomIcons name="play-skip-back" type="Ionicons" size={30} color={AppColors.WHITE} />
+        <TouchableOpacity
+          style={styles.controlBtn}
+          activeOpacity={0.7}
+          onPress={handlePrev}
+        >
+          <CustomIcons
+            name="play-skip-back"
+            type="Ionicons"
+            size={30}
+            color={AppColors.WHITE}
+          />
         </TouchableOpacity>
 
         {/* Play / Pause */}
@@ -304,12 +409,16 @@ const Player = ({ route, navigation }: any) => {
           style={styles.playBtn}
           onPress={handlePlayPause}
           activeOpacity={0.8}
-          disabled={isLoading}>
+          disabled={isLoading}
+        >
           <LinearGradient
-            colors={isLoading
-              ? [AppColors.DimGray as string, AppColors.DimGray as string]
-              : [AppColors.NeonPurple, AppColors.VibrantPink]}
-            style={styles.playBtnInner}>
+            colors={
+              isLoading
+                ? [AppColors.DimGray as string, AppColors.DimGray as string]
+                : [AppColors.NeonPurple, AppColors.VibrantPink]
+            }
+            style={styles.playBtnInner}
+          >
             {isLoading ? (
               <ActivityIndicator size="small" color={AppColors.WHITE} />
             ) : (
@@ -324,15 +433,27 @@ const Player = ({ route, navigation }: any) => {
         </TouchableOpacity>
 
         {/* Next */}
-        <TouchableOpacity style={styles.controlBtn} activeOpacity={0.7} onPress={handleNext}>
-          <CustomIcons name="play-skip-forward" type="Ionicons" size={30} color={AppColors.WHITE} />
+        <TouchableOpacity
+          style={styles.controlBtn}
+          activeOpacity={0.7}
+          onPress={handleNext}
+        >
+          <CustomIcons
+            name="play-skip-forward"
+            type="Ionicons"
+            size={30}
+            color={AppColors.WHITE}
+          />
         </TouchableOpacity>
 
         {/* Repeat */}
         <TouchableOpacity
           style={styles.controlSide}
-          onPress={() => dispatch(setRepeatMode(((repeatMode + 1) % 3) as 0 | 1 | 2))}
-          activeOpacity={0.7}>
+          onPress={() =>
+            dispatch(setRepeatMode(((repeatMode + 1) % 3) as 0 | 1 | 2))
+          }
+          activeOpacity={0.7}
+        >
           <CustomIcons
             name={repeatMode === 1 ? 'repeat-once' : 'repeat'}
             type="MaterialCommunityIcons"
@@ -344,47 +465,97 @@ const Player = ({ route, navigation }: any) => {
       </View>
 
       {/* ── Bottom actions ── */}
-      <View style={[styles.bottomActions, { paddingBottom: insets.bottom + 16 }]}>
+      <View
+        style={[styles.bottomActions, { paddingBottom: insets.bottom + 16 }]}
+      >
         <TouchableOpacity style={styles.actionBtn}>
-          <CustomIcons name="list-music" type="MaterialCommunityIcons" size={22} color={AppColors.SubtleGray} />
+          <CustomIcons
+            name="list-music"
+            type="MaterialCommunityIcons"
+            size={22}
+            color={AppColors.SubtleGray}
+          />
           <Text style={styles.actionLabel}>Queue</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionBtn} onPress={() => setShowPlaylistModal(true)}>
-          <CustomIcons name="add-circle-outline" type="Ionicons" size={22} color={AppColors.SubtleGray} />
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => setShowPlaylistModal(true)}
+        >
+          <CustomIcons
+            name="add-circle-outline"
+            type="Ionicons"
+            size={22}
+            color={AppColors.SubtleGray}
+          />
           <Text style={styles.actionLabel}>Playlist</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionBtn}>
-          <CustomIcons name="share-social-outline" type="Ionicons" size={22} color={AppColors.SubtleGray} />
+          <CustomIcons
+            name="share-social-outline"
+            type="Ionicons"
+            size={22}
+            color={AppColors.SubtleGray}
+          />
           <Text style={styles.actionLabel}>Share</Text>
         </TouchableOpacity>
       </View>
 
       {/* ── Add to Playlist Modal ── */}
-      <Modal visible={showPlaylistModal} transparent animationType="slide" onRequestClose={() => setShowPlaylistModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPlaylistModal(false)} />
+      <Modal
+        visible={showPlaylistModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPlaylistModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowPlaylistModal(false)}
+        />
         <View style={styles.modalSheet}>
           <View style={styles.modalHandle} />
           <Text style={styles.modalTitle}>Add to Playlist</Text>
           {playlists.length === 0 ? (
-            <Text style={styles.emptyText}>No playlists yet. Create one in your Library.</Text>
+            <Text style={styles.emptyText}>
+              No playlists yet. Create one in your Library.
+            </Text>
           ) : (
             <FlatList
               data={playlists}
               keyExtractor={item => String(item.id)}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.playlistRow} onPress={() => handleAddToPlaylist(item)}>
+                <TouchableOpacity
+                  style={styles.playlistRow}
+                  onPress={() => handleAddToPlaylist(item)}
+                >
                   <LinearGradient
-                    colors={[AppColors.NeonPurple + '40', AppColors.VibrantPink + '20']}
-                    style={styles.playlistIcon}>
-                    <CustomIcons name="musical-notes" type="Ionicons" size={18} color={AppColors.NeonPurple} />
+                    colors={[
+                      AppColors.NeonPurple + '40',
+                      AppColors.VibrantPink + '20',
+                    ]}
+                    style={styles.playlistIcon}
+                  >
+                    <CustomIcons
+                      name="musical-notes"
+                      type="Ionicons"
+                      size={18}
+                      color={AppColors.NeonPurple}
+                    />
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.playlistRowName}>{item.name}</Text>
-                    <Text style={styles.playlistRowCount}>{item.trackCount ?? 0} tracks</Text>
+                    <Text style={styles.playlistRowCount}>
+                      {item.trackCount ?? 0} tracks
+                    </Text>
                   </View>
-                  <CustomIcons name="add" type="Ionicons" size={20} color={AppColors.NeonPurple} />
+                  <CustomIcons
+                    name="add"
+                    type="Ionicons"
+                    size={20}
+                    color={AppColors.NeonPurple}
+                  />
                 </TouchableOpacity>
               )}
             />
@@ -467,7 +638,11 @@ const styles = StyleSheet.create({
     width: ARTWORK_SIZE,
     height: ARTWORK_SIZE,
   },
-  loadingText: { fontSize: 14, color: AppColors.WHITE, fontFamily: AppFonts.MulishSemiBold },
+  loadingText: {
+    fontSize: 14,
+    color: AppColors.WHITE,
+    fontFamily: AppFonts.MulishSemiBold,
+  },
   songInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -506,7 +681,13 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     position: 'relative',
   },
-  progressFill: { height: 4, borderRadius: 2, position: 'absolute', left: 0, top: 0 },
+  progressFill: {
+    height: 4,
+    borderRadius: 2,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
   progressThumb: {
     width: 12,
     height: 12,
@@ -519,8 +700,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 4,
   },
-  timeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  timeText: { fontSize: 12, color: AppColors.DimGray, fontFamily: AppFonts.MulishRegular },
+  timeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  timeText: {
+    fontSize: 12,
+    color: AppColors.DimGray,
+    fontFamily: AppFonts.MulishRegular,
+  },
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -560,7 +749,11 @@ const styles = StyleSheet.create({
     borderTopColor: AppColors.GlassBorder,
   },
   actionBtn: { alignItems: 'center', gap: 6 },
-  actionLabel: { fontSize: 11, color: AppColors.DimGray, fontFamily: AppFonts.MulishLight },
+  actionLabel: {
+    fontSize: 11,
+    color: AppColors.DimGray,
+    fontFamily: AppFonts.MulishLight,
+  },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },

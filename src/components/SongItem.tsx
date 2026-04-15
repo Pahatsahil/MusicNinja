@@ -10,6 +10,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import AppColors from '@constants/AppColors';
 import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
+import { losslessApi } from '@api/LosslessAPI';
 
 interface iSongItem {
   item: any;
@@ -17,12 +18,16 @@ interface iSongItem {
 }
 
 const SongItem: FC<iSongItem> = ({ item, onPress }) => {
+  const title = item.title || 'Unknown Title';
+  const artistName = item.channelTitle || item.artist?.name || 'Unknown Artist';
+  const thumbnailUrl = item.thumbnail || (item.album?.cover ? losslessApi.getCoverUrl(item.album.cover) : null);
+
   return (
     <TouchableOpacity onPress={() => onPress(item)} activeOpacity={0.8} style={styles.container}>
       {/* Thumbnail */}
       <View style={styles.thumbnailWrap}>
-        {item.thumbnail ? (
-          <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
+        {thumbnailUrl ? (
+          <Image source={{ uri: thumbnailUrl }} style={styles.thumbnail} />
         ) : (
           <LinearGradient
             colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
@@ -35,10 +40,10 @@ const SongItem: FC<iSongItem> = ({ item, onPress }) => {
       {/* Meta */}
       <View style={styles.meta}>
         <Text style={styles.title} numberOfLines={1}>
-          {item.title || 'Unknown Title'}
+          {title}
         </Text>
         <Text style={styles.artist} numberOfLines={1}>
-          {item.channelTitle || 'Unknown Artist'}
+          {artistName}
         </Text>
       </View>
 
