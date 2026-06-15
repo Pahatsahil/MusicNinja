@@ -255,16 +255,7 @@ const Player = ({ route, navigation }: any) => {
         translucent
       />
 
-      <LinearGradient
-        colors={[
-          AppColors.DeepBlack,
-          AppColors.RichPurple,
-          AppColors.DeepBlack,
-        ]}
-        locations={[0, 0.5, 1]}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <View style={styles.glowBehind} />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: AppColors.DeepBlack }]} />
 
       {/* ── Top bar ── */}
       <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
@@ -308,16 +299,9 @@ const Player = ({ route, navigation }: any) => {
               style={styles.artwork}
             />
           ) : (
-            <LinearGradient
-              colors={[
-                AppColors.NeonPurple,
-                AppColors.VibrantPink,
-                AppColors.DeepPurple,
-              ]}
-              style={styles.artwork}
-            >
+            <View style={[styles.artwork, styles.artworkFallback]}>
               <Text style={styles.artworkEmoji}>🎵</Text>
-            </LinearGradient>
+            </View>
           )}
         </Animated.View>
 
@@ -349,7 +333,7 @@ const Player = ({ route, navigation }: any) => {
             name={isLiked ? 'heart' : 'heart-outline'}
             type="Ionicons"
             size={22}
-            color={isLiked ? AppColors.VibrantPink : AppColors.SubtleGray}
+            color={isLiked ? AppColors.WHITE : AppColors.DimGray}
           />
         </TouchableOpacity>
       </View>
@@ -357,10 +341,7 @@ const Player = ({ route, navigation }: any) => {
       {/* ── Progress bar ── */}
       <View style={styles.progressContainer}>
         <View style={styles.progressTrack}>
-          <LinearGradient
-            colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+          <View
             style={[styles.progressFill, { width: progressBarWidth }]}
           />
           <View
@@ -385,7 +366,7 @@ const Player = ({ route, navigation }: any) => {
             name="shuffle"
             type="Ionicons"
             size={22}
-            color={shuffle ? AppColors.NeonPurple : AppColors.SubtleGray}
+            color={shuffle ? AppColors.WHITE : AppColors.DimGray}
           />
           {shuffle && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -411,25 +392,18 @@ const Player = ({ route, navigation }: any) => {
           activeOpacity={0.8}
           disabled={isLoading}
         >
-          <LinearGradient
-            colors={
-              isLoading
-                ? [AppColors.DimGray as string, AppColors.DimGray as string]
-                : [AppColors.NeonPurple, AppColors.VibrantPink]
-            }
-            style={styles.playBtnInner}
-          >
+          <View style={[styles.playBtnInner, isLoading && styles.playBtnLoading]}>
             {isLoading ? (
-              <ActivityIndicator size="small" color={AppColors.WHITE} />
+              <ActivityIndicator size="small" color={AppColors.DeepBlack} />
             ) : (
               <CustomIcons
                 name={isPlaying && !isPaused ? 'pause' : 'play'}
                 type="FontAwesome5"
                 size={26}
-                color={AppColors.WHITE}
+                color={AppColors.DeepBlack}
               />
             )}
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
 
         {/* Next */}
@@ -458,7 +432,7 @@ const Player = ({ route, navigation }: any) => {
             name={repeatMode === 1 ? 'repeat-once' : 'repeat'}
             type="MaterialCommunityIcons"
             size={22}
-            color={repeatMode > 0 ? AppColors.NeonPurple : AppColors.SubtleGray}
+            color={repeatMode > 0 ? AppColors.WHITE : AppColors.DimGray}
           />
           {repeatMode > 0 && <View style={styles.activeDot} />}
         </TouchableOpacity>
@@ -530,20 +504,14 @@ const Player = ({ route, navigation }: any) => {
                   style={styles.playlistRow}
                   onPress={() => handleAddToPlaylist(item)}
                 >
-                  <LinearGradient
-                    colors={[
-                      AppColors.NeonPurple + '40',
-                      AppColors.VibrantPink + '20',
-                    ]}
-                    style={styles.playlistIcon}
-                  >
+                  <View style={styles.playlistIcon}>
                     <CustomIcons
                       name="musical-notes"
                       type="Ionicons"
                       size={18}
-                      color={AppColors.NeonPurple}
+                      color={AppColors.SubtleGray}
                     />
-                  </LinearGradient>
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.playlistRowName}>{item.name}</Text>
                     <Text style={styles.playlistRowCount}>
@@ -554,7 +522,7 @@ const Player = ({ route, navigation }: any) => {
                     name="add"
                     type="Ionicons"
                     size={20}
-                    color={AppColors.NeonPurple}
+                    color={AppColors.SubtleGray}
                   />
                 </TouchableOpacity>
               )}
@@ -570,15 +538,6 @@ export default Player;
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: AppColors.DeepBlack },
-  glowBehind: {
-    position: 'absolute',
-    width: width,
-    height: width,
-    borderRadius: width / 2,
-    backgroundColor: AppColors.SoftGlow,
-    top: height * 0.1,
-    alignSelf: 'center',
-  },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -612,11 +571,16 @@ const styles = StyleSheet.create({
   },
   artworkWrap: { alignItems: 'center', marginTop: 20, marginBottom: 32 },
   artworkShadow: {
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.6,
-    shadowRadius: 30,
-    elevation: 25,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.7,
+    shadowRadius: 24,
+    elevation: 20,
+  },
+  artworkFallback: {
+    backgroundColor: AppColors.RichPurple,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   artwork: {
     width: ARTWORK_SIZE,
@@ -673,7 +637,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 12,
   },
-  likeBtnActive: { borderColor: AppColors.VibrantPink },
+  likeBtnActive: { borderColor: AppColors.WHITE },
   progressContainer: { paddingHorizontal: 24, marginBottom: 32 },
   progressTrack: {
     height: 4,
@@ -687,6 +651,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
+    backgroundColor: AppColors.WHITE,
   },
   progressThumb: {
     width: 12,
@@ -723,15 +688,15 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: AppColors.NeonPurple,
+    backgroundColor: AppColors.WHITE,
     marginTop: 4,
   },
   playBtn: {
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.7,
-    shadowRadius: 16,
-    elevation: 16,
+    shadowColor: 'rgba(255,255,255,0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 10,
   },
   playBtnInner: {
     width: 74,
@@ -739,6 +704,10 @@ const styles = StyleSheet.create({
     borderRadius: 37,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: AppColors.WHITE,
+  },
+  playBtnLoading: {
+    backgroundColor: AppColors.SubtleGray,
   },
   bottomActions: {
     flexDirection: 'row',
@@ -758,7 +727,7 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   modalSheet: {
-    backgroundColor: AppColors.DeepPurple,
+    backgroundColor: '#111111',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 12,
@@ -794,9 +763,12 @@ const styles = StyleSheet.create({
   playlistIcon: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: AppColors.GlassWhite,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
   },
   playlistRowName: {
     fontSize: 15,

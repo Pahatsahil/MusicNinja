@@ -64,7 +64,7 @@ const Search = ({ navigation }: any) => {
 
   const borderColor = barAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [AppColors.GlassBorder, AppColors.NeonPurple],
+    outputRange: [AppColors.GlassBorder, AppColors.WHITE],
   });
 
   const handleSearch = useCallback(
@@ -116,15 +116,7 @@ const Search = ({ navigation }: any) => {
         backgroundColor="transparent"
         translucent
       />
-      <LinearGradient
-        colors={[
-          AppColors.DeepBlack,
-          AppColors.DeepPurple,
-          AppColors.DeepBlack,
-        ]}
-        locations={[0, 0.4, 1]}
-        style={StyleSheet.absoluteFillObject}
-      />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: AppColors.DeepBlack }]} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
@@ -170,7 +162,7 @@ const Search = ({ navigation }: any) => {
       {/* Content */}
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={AppColors.NeonPurple} />
+          <ActivityIndicator size="large" color={AppColors.WHITE} />
           <Text style={styles.loadingText}>Finding beats...</Text>
         </View>
       ) : isIdle ? (

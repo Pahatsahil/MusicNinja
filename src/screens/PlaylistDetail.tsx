@@ -93,18 +93,16 @@ const PlaylistDetail = ({ route }: any) => {
         <Text style={styles.trackIndexText}>{index + 1}</Text>
       </View>
       <View style={styles.trackIconWrap}>
-        <LinearGradient
-          colors={[AppColors.NeonPurple + '50', AppColors.VibrantPink + '30']}
-          style={styles.trackIcon}>
-          <CustomIcons name="musical-note" type="Ionicons" size={18} color={AppColors.NeonPurple} />
-        </LinearGradient>
+        <View style={styles.trackIcon}>
+          <CustomIcons name="musical-note" type="Ionicons" size={18} color={AppColors.SubtleGray} />
+        </View>
       </View>
       <View style={styles.trackInfo}>
         <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
         <Text style={styles.trackArtist} numberOfLines={1}>{item.channelTitle || 'Unknown Artist'}</Text>
       </View>
       <TouchableOpacity onPress={() => handlePlayTrack(item, index)} style={styles.playIconBtn}>
-        <CustomIcons name="play-circle" type="Ionicons" size={28} color={AppColors.NeonPurple} />
+        <CustomIcons name="play-circle" type="Ionicons" size={28} color={AppColors.SubtleGray} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -112,11 +110,7 @@ const PlaylistDetail = ({ route }: any) => {
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      <LinearGradient
-        colors={[AppColors.DeepBlack, AppColors.RichPurple, AppColors.DeepBlack]}
-        locations={[0, 0.4, 1]}
-        style={StyleSheet.absoluteFillObject}
-      />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: AppColors.DeepBlack }]} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -125,20 +119,18 @@ const PlaylistDetail = ({ route }: any) => {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           {/* Playlist artwork */}
-          <LinearGradient
-            colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-            style={styles.headerArtwork}>
-            <CustomIcons name="musical-notes" type="Ionicons" size={40} color={AppColors.WHITE} />
-          </LinearGradient>
+          <View style={styles.headerArtwork}>
+            <CustomIcons name="musical-notes" type="Ionicons" size={40} color={AppColors.SubtleGray} />
+          </View>
           <Text style={styles.playlistName}>{playlist.name}</Text>
           <Text style={styles.playlistMeta}>{tracks.length} tracks</Text>
 
           {/* Play All button */}
           <TouchableOpacity onPress={handlePlayAll} style={styles.playAllBtn} disabled={tracks.length === 0} activeOpacity={0.8}>
-            <LinearGradient colors={[AppColors.NeonPurple, AppColors.VibrantPink]} style={styles.playAllInner}>
-              <CustomIcons name="play" type="FontAwesome5" size={16} color={AppColors.WHITE} />
+            <View style={styles.playAllInner}>
+              <CustomIcons name="play" type="FontAwesome5" size={14} color={AppColors.DeepBlack} />
               <Text style={styles.playAllText}>Play All</Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -146,7 +138,7 @@ const PlaylistDetail = ({ route }: any) => {
       {/* Track List */}
       {loading ? (
         <View style={styles.loader}>
-          <ActivityIndicator size="large" color={AppColors.NeonPurple} />
+          <ActivityIndicator size="large" color={AppColors.WHITE} />
         </View>
       ) : tracks.length === 0 ? (
         <View style={styles.emptyState}>
@@ -197,11 +189,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 20,
+    backgroundColor: AppColors.RichPurple,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
   },
   playlistName: {
     fontSize: 26,
@@ -217,23 +207,18 @@ const styles = StyleSheet.create({
     fontFamily: AppFonts.MulishRegular,
     marginBottom: 20,
   },
-  playAllBtn: {
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
-    elevation: 12,
-  },
+  playAllBtn: {},
   playAllInner: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 30,
+    borderRadius: 12,
     gap: 10,
+    backgroundColor: AppColors.WHITE,
   },
   playAllText: {
-    color: AppColors.WHITE,
+    color: AppColors.DeepBlack,
     fontFamily: AppFonts.MulishBold,
     fontSize: 16,
     fontWeight: '700',
@@ -254,9 +239,12 @@ const styles = StyleSheet.create({
   trackIcon: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: AppColors.GlassWhite,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
   },
   trackInfo: { flex: 1 },
   trackTitle: { fontSize: 14, fontWeight: '600', color: AppColors.WHITE, fontFamily: AppFonts.MulishSemiBold },

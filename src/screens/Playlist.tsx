@@ -85,11 +85,9 @@ const PlaylistScreen = () => {
       onPress={() => navigation.navigate(screenNames.PlaylistDetail, { playlist: item })}
       onLongPress={() => handleDeletePlaylist(item)}
       activeOpacity={0.8}>
-      <LinearGradient
-        colors={[AppColors.NeonPurple + '30', AppColors.VibrantPink + '15']}
-        style={styles.playlistIcon}>
-        <CustomIcons name="musical-notes" type="Ionicons" size={24} color={AppColors.NeonPurple} />
-      </LinearGradient>
+      <View style={styles.playlistIcon}>
+        <CustomIcons name="musical-notes" type="Ionicons" size={24} color={AppColors.SubtleGray} />
+      </View>
       <View style={styles.playlistInfo}>
         <Text style={styles.playlistName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.playlistCount}>{item.trackCount ?? 0} tracks</Text>
@@ -101,11 +99,7 @@ const PlaylistScreen = () => {
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      <LinearGradient
-        colors={[AppColors.DeepBlack, AppColors.DeepPurple, AppColors.DeepBlack]}
-        locations={[0, 0.4, 1]}
-        style={StyleSheet.absoluteFillObject}
-      />
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: AppColors.DeepBlack }]} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
@@ -121,14 +115,14 @@ const PlaylistScreen = () => {
             if (activeTab === 'downloads') handlePlayAllDownloads();
             else setShowCreateModal(true);
           }}>
-          <LinearGradient colors={[AppColors.NeonPurple, AppColors.VibrantPink]} style={styles.addBtnInner}>
+          <View style={styles.addBtnInner}>
             <CustomIcons
               name={activeTab === 'downloads' ? 'play' : 'plus'}
               type={activeTab === 'downloads' ? 'FontAwesome5' : 'AntDesign'}
               size={activeTab === 'downloads' ? 14 : 18}
-              color={AppColors.WHITE}
+              color={AppColors.DeepBlack}
             />
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -140,12 +134,7 @@ const PlaylistScreen = () => {
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}>
             {activeTab === tab && (
-              <LinearGradient
-                colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
+              <View style={StyleSheet.absoluteFillObject} />
             )}
             <Text style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}>
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -172,9 +161,9 @@ const PlaylistScreen = () => {
               Search and play music to save it offline.
             </Text>
             <TouchableOpacity style={styles.exploreBtn} onPress={() => navigation.navigate('Search')}>
-              <LinearGradient colors={[AppColors.NeonPurple, AppColors.VibrantPink]} style={styles.exploreBtnInner}>
+              <View style={styles.exploreBtnInner}>
                 <Text style={styles.exploreText}>Explore Music</Text>
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           </View>
         )
@@ -195,9 +184,9 @@ const PlaylistScreen = () => {
               Tap + to create your first playlist.
             </Text>
             <TouchableOpacity style={styles.exploreBtn} onPress={() => setShowCreateModal(true)}>
-              <LinearGradient colors={[AppColors.NeonPurple, AppColors.VibrantPink]} style={styles.exploreBtnInner}>
+              <View style={styles.exploreBtnInner}>
                 <Text style={styles.exploreText}>Create Playlist</Text>
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           </View>
         )
@@ -219,11 +208,9 @@ const PlaylistScreen = () => {
             onSubmitEditing={handleCreatePlaylist}
           />
           <TouchableOpacity onPress={handleCreatePlaylist} activeOpacity={0.8}>
-            <LinearGradient
-              colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-              style={styles.createBtn}>
+            <View style={styles.createBtn}>
               <Text style={styles.createBtnText}>Create</Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -254,19 +241,14 @@ const styles = StyleSheet.create({
     fontFamily: AppFonts.MulishLight,
     marginTop: 4,
   },
-  addBtn: {
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
-    elevation: 12,
-  },
+  addBtn: {},
   addBtnInner: {
     width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: AppColors.WHITE,
   },
   tabRow: {
     flexDirection: 'row',
@@ -287,7 +269,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
   },
-  tabActive: {},
+  tabActive: { backgroundColor: 'rgba(255,255,255,0.1)' },
   tabLabel: { fontSize: 13, color: AppColors.DimGray, fontFamily: AppFonts.MulishSemiBold },
   tabLabelActive: { color: AppColors.WHITE, fontFamily: AppFonts.MulishBold },
 
@@ -306,9 +288,12 @@ const styles = StyleSheet.create({
   playlistIcon: {
     width: 50,
     height: 50,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: AppColors.GlassWhite,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
   },
   playlistInfo: { flex: 1 },
   playlistName: { fontSize: 15, color: AppColors.WHITE, fontFamily: AppFonts.MulishSemiBold, fontWeight: '600' },
@@ -319,14 +304,14 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 60, marginBottom: 16 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: AppColors.WHITE, fontFamily: AppFonts.MulishBold, marginBottom: 8, textAlign: 'center' },
   emptySubtitle: { fontSize: 14, color: AppColors.DimGray, fontFamily: AppFonts.MulishLight, textAlign: 'center', lineHeight: 20, marginBottom: 30 },
-  exploreBtn: { shadowColor: AppColors.NeonPurple, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 15, elevation: 10 },
-  exploreBtnInner: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: 30 },
-  exploreText: { color: AppColors.WHITE, fontFamily: AppFonts.MulishBold, fontSize: 16 },
+  exploreBtn: {},
+  exploreBtnInner: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: 10, backgroundColor: AppColors.WHITE },
+  exploreText: { color: AppColors.DeepBlack, fontFamily: AppFonts.MulishBold, fontSize: 16 },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
   modalSheet: {
-    backgroundColor: AppColors.DeepPurple,
+    backgroundColor: '#111111',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 12,
@@ -348,6 +333,6 @@ const styles = StyleSheet.create({
     fontFamily: AppFonts.MulishRegular,
     marginBottom: 16,
   },
-  createBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  createBtnText: { color: AppColors.WHITE, fontFamily: AppFonts.MulishBold, fontSize: 16, fontWeight: '700' },
+  createBtn: { borderRadius: 12, paddingVertical: 16, alignItems: 'center', backgroundColor: AppColors.WHITE },
+  createBtnText: { color: AppColors.DeepBlack, fontFamily: AppFonts.MulishBold, fontSize: 16, fontWeight: '700' },
 });

@@ -6,9 +6,7 @@ import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
 import { iconsType } from '@components/common/CustomIcons';
 import { useTheme } from '@utills/ThemeContext';
-import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
 
 const TABS: Record<number, { icon: iconsType; label: string }> = {
   0: {
@@ -30,7 +28,6 @@ const CustomBottomTabs: React.FC<
 > = ({ navigation, state, hasMiniPlayer }) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const miniPlayerOffset = hasMiniPlayer ? 68 : 0;
 
   return (
     <View
@@ -38,11 +35,12 @@ const CustomBottomTabs: React.FC<
         styles.container,
         {
           paddingBottom: insets.bottom + 8,
-          backgroundColor: AppColors.DeepPurple,
-          marginBottom: 0,
         },
       ]}
     >
+      {/* Top divider line */}
+      <View style={styles.topDivider} />
+
       {state.routeNames.map((item: string, index: number) => {
         const isFocused = state.index === index;
         const tab = TABS[index];
@@ -65,18 +63,12 @@ const CustomBottomTabs: React.FC<
             onPress={handlePress}
             activeOpacity={0.75}
           >
-            {isFocused ? (
-              <LinearGradient
-                colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-                style={styles.activeIconWrap}
-              >
-                <CustomIcons {...tab.icon} color={AppColors.WHITE} />
-              </LinearGradient>
-            ) : (
-              <View style={styles.iconWrap}>
-                <CustomIcons {...tab.icon} color={AppColors.SubtleGray} />
-              </View>
-            )}
+            <View style={[styles.iconWrap, isFocused && styles.activeIconWrap]}>
+              <CustomIcons
+                {...tab.icon}
+                color={isFocused ? AppColors.WHITE : AppColors.DimGray}
+              />
+            </View>
             <Text style={[styles.label, isFocused && styles.labelActive]}>
               {tab.label}
             </Text>
@@ -94,8 +86,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingTop: 10,
     paddingHorizontal: 10,
-    borderTopWidth: 1,
-    borderTopColor: AppColors.GlassBorder,
+    backgroundColor: AppColors.DeepPurple,
+    position: 'relative',
+  },
+  topDivider: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: AppColors.GlassBorder,
   },
   item: {
     flex: 1,
@@ -105,31 +105,24 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 46,
     height: 38,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   activeIconWrap: {
-    width: 46,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
   },
   label: {
     fontSize: 10,
-    color: AppColors.SubtleGray,
+    color: AppColors.DimGray,
     fontFamily: AppFonts.MulishRegular,
     marginTop: 4,
   },
   labelActive: {
     color: AppColors.WHITE,
-    fontFamily: AppFonts.MulishBold,
-    fontWeight: '700',
+    fontFamily: AppFonts.MulishSemiBold,
+    fontWeight: '600',
   },
 });

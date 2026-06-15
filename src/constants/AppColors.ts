@@ -36,17 +36,24 @@ const AppColors = {
   //Play Icon
   ReddishPlay: '#E00D27',
 
-  // Premium dark gradient palette
-  DeepBlack: '#0A0015',
-  DeepPurple: '#1A0535',
-  RichPurple: '#2D0963',
-  NeonPurple: '#6F2ECF',
-  VibrantPink: '#C44DFF',
-  SoftGlow: 'rgba(111,46,207,0.25)',
-  GlassWhite: 'rgba(255,255,255,0.08)',
-  GlassBorder: 'rgba(255,255,255,0.15)',
-  SubtleGray: 'rgba(255,255,255,0.5)',
-  DimGray: 'rgba(255,255,255,0.3)',
-};
-export default AppColors;
+  // ── Monochrome Dark Palette ──────────────────────────────────────────────
+  // Backgrounds
+  DeepBlack: '#0a0a0a',        // Main app background (true near-black)
+  DeepPurple: '#111111',       // Secondary background (slightly lighter black)
+  RichPurple: '#161616',       // Card/surface background
 
+  // Primary accent — pure white replaces neon purple
+  NeonPurple: '#ffffff',       // Primary accent (white)
+  VibrantPink: '#cccccc',      // Secondary accent (light gray)
+
+  // Glow / glass effects — very subtle white tints
+  SoftGlow: 'rgba(255,255,255,0.04)',
+  GlassWhite: 'rgba(255,255,255,0.06)',
+  GlassBorder: 'rgba(255,255,255,0.1)',
+
+  // Text shades
+  SubtleGray: 'rgba(255,255,255,0.55)',   // Secondary text / inactive icons
+  DimGray: 'rgba(255,255,255,0.3)',       // Muted / placeholder text
+};
+
+export default AppColors;

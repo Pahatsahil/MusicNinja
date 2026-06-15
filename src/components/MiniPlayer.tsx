@@ -9,7 +9,6 @@ import {
   Dimensions,
   PanResponder,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import AppColors from '@constants/AppColors';
 import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
@@ -49,7 +48,6 @@ const MiniPlayer = () => {
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only hijack if clearly dragging down, not a tap
         return Math.abs(gestureState.dy) > 8 && gestureState.dy > 0;
       },
       onPanResponderGrant: () => {
@@ -58,14 +56,12 @@ const MiniPlayer = () => {
       },
       onPanResponderMove: (_, gestureState) => {
         if (gestureState.dy > 0) {
-          // Follow finger downward
           dragY.setValue(gestureState.dy);
         }
       },
       onPanResponderRelease: async (_, gestureState) => {
         isDragging.current = false;
         if (gestureState.dy > 50) {
-          // Animate out then clear
           Animated.timing(dragY, {
             toValue: MINI_HEIGHT + 100,
             duration: 200,
@@ -76,7 +72,6 @@ const MiniPlayer = () => {
             dispatch(clearQueue());
           });
         } else {
-          // Snap back
           Animated.spring(dragY, {
             toValue: 0,
             useNativeDriver: true,
@@ -84,8 +79,7 @@ const MiniPlayer = () => {
           }).start();
         }
       },
-      onPanResponderTerminate: (_, gestureState) => {
-        // Snap back if interrupted
+      onPanResponderTerminate: () => {
         Animated.spring(dragY, {
           toValue: 0,
           useNativeDriver: true,
@@ -127,19 +121,9 @@ const MiniPlayer = () => {
         },
       ]}
     >
-      <LinearGradient
-        colors={[AppColors.DeepPurple, AppColors.RichPurple]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.container}
-      >
-        {/* Progress glow line at top */}
-        <LinearGradient
-          colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.topBar}
-        />
+      <View style={styles.container}>
+        {/* White accent line at top */}
+        <View style={styles.topAccentLine} />
 
         {/* Artwork */}
         <TouchableOpacity
@@ -153,12 +137,9 @@ const MiniPlayer = () => {
               style={styles.artwork}
             />
           ) : (
-            <LinearGradient
-              colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-              style={styles.artworkPlaceholder}
-            >
+            <View style={styles.artworkPlaceholder}>
               <Text style={styles.artworkEmoji}>🎵</Text>
-            </LinearGradient>
+            </View>
           )}
         </TouchableOpacity>
 
@@ -183,17 +164,14 @@ const MiniPlayer = () => {
             style={styles.playBtn}
             activeOpacity={0.7}
           >
-            <LinearGradient
-              colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-              style={styles.playBtnInner}
-            >
+            <View style={styles.playBtnInner}>
               <CustomIcons
                 name={isPlaying && !isPaused ? 'pause' : 'play'}
                 type="FontAwesome5"
-                size={14}
-                color={AppColors.WHITE}
+                size={13}
+                color={AppColors.DeepBlack}
               />
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
 
           {hasNext && (
@@ -211,7 +189,7 @@ const MiniPlayer = () => {
             </TouchableOpacity>
           )}
         </View>
-      </LinearGradient>
+      </View>
     </Animated.View>
   );
 };
@@ -221,14 +199,13 @@ export default MiniPlayer;
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    // bottom: 0,
     left: 0,
     right: 0,
     zIndex: 100,
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
     elevation: 20,
   },
   container: {
@@ -236,33 +213,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: MINI_HEIGHT,
     paddingHorizontal: 12,
+    backgroundColor: AppColors.DeepPurple,
     borderTopWidth: 1,
     borderTopColor: AppColors.GlassBorder,
     gap: 10,
   },
-  topBar: {
+  topAccentLine: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 2,
+    height: 1,
+    backgroundColor: AppColors.WHITE,
+    opacity: 0.7,
   },
   artworkWrap: {
-    borderRadius: 10,
+    borderRadius: 8,
     overflow: 'hidden',
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
   },
-  artwork: { width: 46, height: 46, borderRadius: 10 },
+  artwork: { width: 46, height: 46, borderRadius: 8 },
   artworkPlaceholder: {
     width: 46,
     height: 46,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: AppColors.RichPurple,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
   },
   artworkEmoji: { fontSize: 22 },
   infoWrap: {
@@ -271,7 +249,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: AppColors.WHITE,
     fontFamily: AppFonts.MulishBold,
   },
@@ -286,19 +264,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  playBtn: {
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 8,
-  },
+  playBtn: {},
   playBtnInner: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: AppColors.WHITE,
   },
   nextBtn: {
     width: 36,

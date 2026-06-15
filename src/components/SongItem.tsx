@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import AppColors from '@constants/AppColors';
 import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
@@ -29,11 +28,9 @@ const SongItem: FC<iSongItem> = ({ item, onPress }) => {
         {thumbnailUrl ? (
           <Image source={{ uri: thumbnailUrl }} style={styles.thumbnail} />
         ) : (
-          <LinearGradient
-            colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-            style={styles.thumbnail}>
+          <View style={[styles.thumbnail, styles.thumbnailFallback]}>
             <Text style={{ fontSize: 20 }}>🎵</Text>
-          </LinearGradient>
+          </View>
         )}
       </View>
 
@@ -49,7 +46,7 @@ const SongItem: FC<iSongItem> = ({ item, onPress }) => {
 
       {/* Menu */}
       <TouchableOpacity style={styles.menu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <CustomIcons name="ellipsis-vertical" type="Ionicons" size={18} color={AppColors.SubtleGray} />
+        <CustomIcons name="ellipsis-vertical" type="Ionicons" size={18} color={AppColors.DimGray} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -64,26 +61,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginHorizontal: 16,
-    marginVertical: 4,
-    backgroundColor: AppColors.GlassWhite,
-    borderRadius: 16,
+    marginVertical: 3,
+    backgroundColor: AppColors.RichPurple,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: AppColors.GlassBorder,
     gap: 14,
   },
   thumbnailWrap: {
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowRadius: 4,
+    elevation: 4,
   },
   thumbnail: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
+    width: 50,
+    height: 50,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  thumbnailFallback: {
+    backgroundColor: AppColors.GlassWhite,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
   },
   meta: { flex: 1 },
   title: {

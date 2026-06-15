@@ -64,10 +64,7 @@ const Splash = ({ navigation }: any) => {
   }, []);
 
   return (
-    <LinearGradient
-      colors={[AppColors.DeepBlack, AppColors.DeepPurple, AppColors.RichPurple]}
-      locations={[0, 0.5, 1]}
-      style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       {/* Background glow orb */}
@@ -82,16 +79,14 @@ const Splash = ({ navigation }: any) => {
           { opacity: logoOpacity, transform: [{ scale: logoScale }] },
         ]}>
         {/* Icon circle */}
-        <LinearGradient
-          colors={[AppColors.NeonPurple, AppColors.VibrantPink]}
-          style={styles.iconCircle}>
+        <View style={styles.iconCircle}>
           <CustomIcons
             name="musical-notes"
             type="Ionicons"
             size={52}
             color={AppColors.WHITE}
           />
-        </LinearGradient>
+        </View>
 
         <Text style={styles.appName}>MusicNinja</Text>
         <View style={styles.taglineRow}>
@@ -110,7 +105,7 @@ const Splash = ({ navigation }: any) => {
           ))}
         </View>
       </Animated.View>
-    </LinearGradient>
+    </View>
   );
 };
 
@@ -121,6 +116,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: AppColors.DeepBlack,
   },
   glowOrb: {
     position: 'absolute',
@@ -137,15 +133,13 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 110,
     height: 110,
-    borderRadius: 35,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    shadowColor: AppColors.NeonPurple,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.7,
-    shadowRadius: 20,
-    elevation: 20,
+    backgroundColor: AppColors.RichPurple,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
   },
   appName: {
     fontSize: 42,
@@ -194,6 +188,6 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 20,
-    backgroundColor: AppColors.NeonPurple,
+    backgroundColor: AppColors.WHITE,
   },
 });

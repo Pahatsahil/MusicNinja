@@ -11,7 +11,6 @@ import {
   StatusBar,
   FlatList,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import AppColors from '@constants/AppColors';
 import AppFonts from '@constants/AppFonts';
 import { CustomIcons } from '@components/common';
@@ -24,6 +23,16 @@ import { setCurrentTrack, setQueue } from '@redux/slices/player/playerSlice';
 
 const { width } = Dimensions.get('window');
 const CARD_W = width * 0.44;
+
+const GENRES = [
+  { label: 'Hip-Hop' },
+  { label: 'Pop' },
+  { label: 'Rock' },
+  { label: 'Electronic' },
+  { label: 'R&B' },
+  { label: 'Jazz' },
+  { label: 'Classical' },
+];
 
 const HomeScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
@@ -57,9 +66,9 @@ const HomeScreen = ({ navigation }: any) => {
     }
   };
 
-  const headerBg = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: ['transparent', AppColors.DeepPurple],
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [0, 1],
     extrapolate: 'clamp',
   });
 
@@ -88,15 +97,10 @@ const HomeScreen = ({ navigation }: any) => {
             style={StyleSheet.absoluteFillObject}
           />
         ) : (
-          <LinearGradient
-            colors={[AppColors.DeepBlack, AppColors.RichPurple]}
-            style={StyleSheet.absoluteFillObject}
-          />
+          <View style={[StyleSheet.absoluteFillObject, styles.featuredCardFallback]} />
         )}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.8)']}
-          style={styles.featuredGradient}
-        >
+        {/* Dark gradient overlay */}
+        <View style={styles.featuredGradient}>
           <View style={{ flex: 1 }} />
           <View style={styles.featuredInfo}>
             <Text style={styles.featuredTitle} numberOfLines={1}>
@@ -110,11 +114,11 @@ const HomeScreen = ({ navigation }: any) => {
             <CustomIcons
               name="play"
               type="FontAwesome5"
-              size={12}
-              color={AppColors.WHITE}
+              size={10}
+              color={AppColors.DeepBlack}
             />
           </View>
-        </LinearGradient>
+        </View>
       </TouchableOpacity>
     ),
     [trendingTracks],
@@ -130,17 +134,14 @@ const HomeScreen = ({ navigation }: any) => {
         }
       >
         <Text style={styles.trendingRank}>#{index + 1}</Text>
-        <LinearGradient
-          colors={[AppColors.NeonPurple + '80', AppColors.VibrantPink + '80']}
-          style={styles.trendingEmojiBg}
-        >
+        <View style={styles.trendingEmojiBg}>
           <CustomIcons
             name="musical-notes"
             type="Ionicons"
-            size={20}
+            size={18}
             color={AppColors.WHITE}
           />
-        </LinearGradient>
+        </View>
         <View style={styles.trendingMeta}>
           <Text style={styles.trendingTitle} numberOfLines={1}>
             {item.name}
@@ -152,8 +153,8 @@ const HomeScreen = ({ navigation }: any) => {
         <CustomIcons
           name="chevron-forward"
           type="Ionicons"
-          size={20}
-          color={AppColors.SubtleGray}
+          size={18}
+          color={AppColors.DimGray}
         />
       </TouchableOpacity>
     ),
@@ -167,21 +168,18 @@ const HomeScreen = ({ navigation }: any) => {
         backgroundColor="transparent"
         translucent
       />
-      <LinearGradient
-        colors={[
-          AppColors.DeepBlack,
-          AppColors.DeepPurple,
-          AppColors.DeepBlack,
-        ]}
-        locations={[0, 0.45, 1]}
-        style={StyleSheet.absoluteFillObject}
-      />
 
       {/* Sticky animated header */}
       <Animated.View
         style={[
+          styles.headerBg,
+          { opacity: headerOpacity, top: 0, paddingTop: insets.top },
+        ]}
+      />
+      <View
+        style={[
           styles.header,
-          { backgroundColor: headerBg, paddingTop: insets.top + 10 },
+          { paddingTop: insets.top + 10 },
         ]}
       >
         <View style={styles.headerLeft}>
@@ -190,9 +188,9 @@ const HomeScreen = ({ navigation }: any) => {
             style={styles.logoImage}
           />
           <View>
-            <Text style={styles.greeting}>{greeting} 👋</Text>
+            <Text style={styles.greeting}>{greeting}</Text>
             <Text style={styles.headerTitle}>
-              Music<Text style={{ color: AppColors.NeonPurple }}>Ninja</Text>
+              Music<Text style={{ color: AppColors.WHITE }}>Ninja</Text>
             </Text>
           </View>
         </View>
@@ -203,11 +201,11 @@ const HomeScreen = ({ navigation }: any) => {
           <CustomIcons
             name="search1"
             type="AntDesign"
-            size={20}
+            size={18}
             color={AppColors.WHITE}
           />
         </TouchableOpacity>
-      </Animated.View>
+      </View>
 
       <Animated.ScrollView
         onScroll={Animated.event(
@@ -223,9 +221,9 @@ const HomeScreen = ({ navigation }: any) => {
       >
         {/* Trending Tracks */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Trending Tracks</Text>
+          <Text style={styles.sectionTitle}>Trending</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Playlist')}>
-            <Text style={styles.seeAll}>Library</Text>
+            <Text style={styles.seeAll}>Library →</Text>
           </TouchableOpacity>
         </View>
         {trendingTracks.length > 0 ? (
@@ -239,15 +237,15 @@ const HomeScreen = ({ navigation }: any) => {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Loading trends...</Text>
+            <Text style={styles.emptyText}>Loading trends…</Text>
           </View>
         )}
 
         {/* Playlists */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Your Playlists 🎶</Text>
+          <Text style={styles.sectionTitle}>Your Playlists</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Playlist')}>
-            <Text style={styles.seeAll}>See all</Text>
+            <Text style={styles.seeAll}>See all →</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.trendingContainer}>
@@ -262,7 +260,7 @@ const HomeScreen = ({ navigation }: any) => {
           )}
         </View>
 
-        {/* Genres placeholder */}
+        {/* Genres */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Browse Genres</Text>
         </View>
@@ -271,20 +269,9 @@ const HomeScreen = ({ navigation }: any) => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.genreList}
         >
-          {[
-            { label: 'Hip-Hop', color: '#fc466b' },
-            { label: 'Pop', color: '#6F2ECF' },
-            { label: 'Rock', color: '#e96c4c' },
-            { label: 'Electronic', color: '#11998e' },
-            { label: 'R&B', color: '#3f5efb' },
-          ].map(g => (
-            <TouchableOpacity key={g.label} activeOpacity={0.8}>
-              <LinearGradient
-                colors={[g.color + 'CC', g.color + '55']}
-                style={styles.genreChip}
-              >
-                <Text style={styles.genreLabel}>{g.label}</Text>
-              </LinearGradient>
+          {GENRES.map(g => (
+            <TouchableOpacity key={g.label} activeOpacity={0.75} style={styles.genreChip}>
+              <Text style={styles.genreLabel}>{g.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -297,6 +284,18 @@ export default HomeScreen;
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: AppColors.DeepBlack },
+
+  // Animated header background
+  headerBg: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 90,
+    backgroundColor: AppColors.DeepPurple,
+    zIndex: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.GlassBorder,
+  },
   header: {
     position: 'absolute',
     top: 0,
@@ -315,33 +314,37 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: AppColors.NeonPurple,
-  },
-  greeting: {
-    fontSize: 12,
-    color: AppColors.DimGray,
-    fontFamily: AppFonts.MulishLight,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: AppColors.WHITE,
-    fontFamily: AppFonts.MulishBold,
-  },
-  searchIconBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
+  },
+  greeting: {
+    fontSize: 11,
+    color: AppColors.DimGray,
+    fontFamily: AppFonts.MulishLight,
+    letterSpacing: 0.3,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: AppColors.WHITE,
+    fontFamily: AppFonts.MulishBold,
+    letterSpacing: -0.3,
+  },
+  searchIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: AppColors.GlassWhite,
     borderWidth: 1,
     borderColor: AppColors.GlassBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // Section headers
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -351,43 +354,50 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: AppColors.WHITE,
     fontFamily: AppFonts.MulishBold,
+    letterSpacing: -0.2,
   },
   seeAll: {
-    fontSize: 13,
-    color: AppColors.NeonPurple,
+    fontSize: 12,
+    color: AppColors.SubtleGray,
     fontFamily: AppFonts.MulishSemiBold,
+    letterSpacing: 0.2,
   },
-  featuredList: { paddingHorizontal: 16, gap: 12 },
+
+  // Featured cards (horizontal scroll)
+  featuredList: { paddingHorizontal: 16, gap: 10 },
   featuredCard: {
     width: CARD_W,
     height: CARD_W * 1.1,
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: AppColors.GlassWhite,
+    backgroundColor: AppColors.RichPurple,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
+  },
+  featuredCardFallback: {
+    backgroundColor: AppColors.RichPurple,
   },
   featuredGradient: {
     flex: 1,
-    padding: 12,
+    padding: 10,
     justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   featuredInfo: {
     marginTop: 'auto',
   },
   featuredTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: AppColors.WHITE,
     fontFamily: AppFonts.MulishBold,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   featuredArtist: {
-    fontSize: 12,
+    fontSize: 11,
     color: AppColors.SubtleGray,
     fontFamily: AppFonts.MulishRegular,
     marginTop: 2,
@@ -396,19 +406,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     right: 10,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: AppColors.WHITE,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
   },
+
+  // Playlists
   trendingContainer: {
     marginHorizontal: 16,
-    backgroundColor: AppColors.GlassWhite,
-    borderRadius: 20,
+    backgroundColor: AppColors.RichPurple,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: AppColors.GlassBorder,
     overflow: 'hidden',
@@ -416,25 +426,28 @@ const styles = StyleSheet.create({
   trendingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 13,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: AppColors.GlassBorder,
   },
   trendingRank: {
-    width: 24,
-    fontSize: 12,
-    color: AppColors.NeonPurple,
+    width: 26,
+    fontSize: 11,
+    color: AppColors.DimGray,
     fontFamily: AppFonts.MulishBold,
     fontWeight: '700',
   },
   trendingEmojiBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    backgroundColor: AppColors.GlassWhite,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
   },
   trendingMeta: { flex: 1 },
   trendingTitle: {
@@ -444,30 +457,37 @@ const styles = StyleSheet.create({
     fontFamily: AppFonts.MulishSemiBold,
   },
   trendingArtist: {
-    fontSize: 12,
+    fontSize: 11,
     color: AppColors.DimGray,
     fontFamily: AppFonts.MulishRegular,
     marginTop: 2,
   },
-  genreList: { paddingHorizontal: 16, gap: 10 },
+
+  // Genres
+  genreList: { paddingHorizontal: 16, gap: 8 },
   genreChip: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 50,
-    minWidth: 90,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 80,
     alignItems: 'center',
+    backgroundColor: AppColors.RichPurple,
+    borderWidth: 1,
+    borderColor: AppColors.GlassBorder,
   },
   genreLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: AppColors.WHITE,
+    color: AppColors.SubtleGray,
     fontFamily: AppFonts.MulishSemiBold,
   },
+
+  // Empty state
   emptyContainer: {
     marginHorizontal: 20,
     padding: 20,
-    backgroundColor: AppColors.GlassWhite,
-    borderRadius: 16,
+    backgroundColor: AppColors.RichPurple,
+    borderRadius: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: AppColors.GlassBorder,
